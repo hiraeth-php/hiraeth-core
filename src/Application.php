@@ -115,7 +115,7 @@ class Application
 
 		$whoops->register();
 
-		if ($this->getEnvironment('DEBUG', TRUE)) {
+		if ($this->getEnvironment('DEBUG')) {
 			if (PHP_SAPI == 'cli') {
 				$whoops->pushHandler(new Whoops\Handler\PlainTextHandler());
 			} else {
