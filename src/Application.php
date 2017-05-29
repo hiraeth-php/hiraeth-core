@@ -80,7 +80,7 @@ class Application
 	/**
 	 *
 	 */
-	public function getEnvironment($name, $default)
+	public function getEnvironment($name, $default = NULL)
 	{
 		$value = getenv($name);
 
