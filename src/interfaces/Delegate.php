@@ -14,7 +14,7 @@ interface Delegate
 	 *
 	 * @static
 	 * @access public
-	 * @return string The for which the delegate operates
+	 * @return string The class for which the delegate operates
 	 */
 	static public function getClass();
 
@@ -33,6 +33,7 @@ interface Delegate
 	 * Get the instance of the class for which the delegate operates.
 	 *
 	 * @access public
+	 * @param Auryn\Injector $broker The dependency injector instance
 	 * @return Object The instance of the class for which the delegate operates
 	 */
 	public function __invoke(Auryn\Injector $broker);
