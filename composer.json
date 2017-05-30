@@ -13,8 +13,7 @@
         "vlucas/phpdotenv": "^2.4",
         "rdlowrey/auryn": "^1.4",
         "filp/whoops": "^2.1",
-        "dotink/jin": "^1.2",
-        "erusev/parsedown": "^1.6"
+        "dotink/jin": "^1.2"
     },
     "autoload": {
         "classmap": ["src/"]

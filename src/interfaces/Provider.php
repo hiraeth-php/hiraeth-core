@@ -13,7 +13,7 @@ interface Provider
 	 * Get the interfaces for which the provider operates.
 	 *
 	 * @access public
-	 * @return array A list of interfaces for which the operates
+	 * @return array A list of interfaces for which the provider operates
 	 */
 	static public function getInterfaces();
 

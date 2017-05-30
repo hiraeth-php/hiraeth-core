@@ -20,7 +20,7 @@ interface Delegate
 
 
 	/**
-	 * Get the interfaces for which the delegate provides a class.
+	 * Get the interfaces for which the delegate operates.
 	 *
 	 * @static
 	 * @access public
