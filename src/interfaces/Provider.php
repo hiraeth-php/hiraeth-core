@@ -2,8 +2,6 @@
 
 namespace Hiraeth;
 
-use Auryn;
-
 /**
  * Providers add additional dependencies or configuration for objects of certain interfaces.
  */
@@ -24,5 +22,5 @@ interface Provider
 	 * @access public
 	 * @return Object The prepared instance
 	 */
-	public function __invoke($instance, Aurny\Injector $broker);
+	public function __invoke($instance, Broker $broker);
 }

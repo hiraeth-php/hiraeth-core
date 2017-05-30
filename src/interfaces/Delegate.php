@@ -2,8 +2,6 @@
 
 namespace Hiraeth;
 
-use Auryn;
-
 /**
  * Delegates are responsible for constructing dependencies for the dependency injector.
  */
@@ -33,8 +31,8 @@ interface Delegate
 	 * Get the instance of the class for which the delegate operates.
 	 *
 	 * @access public
-	 * @param Auryn\Injector $broker The dependency injector instance
+	 * @param Broker $broker The dependency injector instance
 	 * @return Object The instance of the class for which the delegate operates
 	 */
-	public function __invoke(Auryn\Injector $broker);
+	public function __invoke(Broker $broker);
 }

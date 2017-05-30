@@ -2,7 +2,6 @@
 
 namespace Hiraeth;
 
-use Auryn;
 use Whoops;
 use Closure;
 use Dotink\Jin;
@@ -123,7 +122,9 @@ class Application
 			}
 		}
 
-		$this->broker = new Auryn\Injector();
+		class_alias('Auryn\Injector', 'Hiraeth\Broker');
+
+		$this->broker = new Broker();
 		$this->config = new Configuration(new Jin\Parser());
 
 		$this->broker->share($this);
