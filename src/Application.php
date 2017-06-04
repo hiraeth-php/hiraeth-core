@@ -95,9 +95,22 @@ class Application
 	/**
 	 *
 	 */
-	public function getFile($path)
+	public function getFile($path, $create = FALSE)
 	{
-		return $this->root . DIRECTORY_SEPARATOR . $path;
+		$exists = $this->hasFile($path);
+		$path   = $this->root . DIRECTORY_SEPARATOR . $path;
+
+		if (!$exists && $create) {
+			$directory = dirname($path);
+
+			if (!is_dir($directory)) {
+				mkdir($directory, 0777, TRUE);
+			}
+
+			file_put_contents($path, '');
+		}
+
+		return $path;
 	}
 
 
