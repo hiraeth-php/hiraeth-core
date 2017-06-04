@@ -70,7 +70,7 @@ class Application
 	/**
 	 *
 	 */
-	public function getDirectory($path)
+	public function getDirectory($path = NULL, $create = FALSE)
 	{
 		return rtrim($this->root . DIRECTORY_SEPARATOR . $path, '\\/');
 	}
