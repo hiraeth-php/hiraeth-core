@@ -2,6 +2,7 @@
 
 namespace Hiraeth;
 
+use Dotenv;
 use Whoops;
 use Closure;
 use Dotink\Jin;
@@ -106,7 +107,7 @@ class Application
 	public function run(Closure $post_boot)
 	{
 		if ($this->hasFile('.env')) {
-			$dotenv = new Dotenv\Dotenv($this->getFile('.env'));
+			$dotenv = new Dotenv\Dotenv($this->getDirectory());
 			$dotenv->load();
 		}
 
