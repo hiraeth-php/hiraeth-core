@@ -126,13 +126,11 @@ class Application
 
 		$whoops = new Whoops\Run();
 
-		$whoops->register();
-
 		if ($this->getEnvironment('DEBUG')) {
 			if (PHP_SAPI == 'cli') {
-				$whoops->pushHandler(new Whoops\Handler\PlainTextHandler());
+				$whoops->register()->pushHandler(new Whoops\Handler\PlainTextHandler());
 			} else {
-				$whoops->pushHandler(new Whoops\Handler\PrettyPageHandler());
+				$whoops->register()->pushHandler(new Whoops\Handler\PrettyPageHandler());
 			}
 		}
 
@@ -164,7 +162,7 @@ class Application
 		if (isset($aliases['psr\log\loggerinterface'])) {
 			$logger = $this->broker->make('Psr\Log\LoggerInterface');
 
-			$whoops->pushHandler(function($exception, $inspector, $run) use ($logger) {
+			$whoops->register()->pushHandler(function($exception, $inspector, $run) use ($logger) {
 				$logger->error(sprintf(
 					'Message: %s, Trace: %s',
 					$exception->getMessage(),
