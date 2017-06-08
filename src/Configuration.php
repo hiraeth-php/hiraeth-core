@@ -70,7 +70,8 @@ class Configuration
 			), '/\\');
 
 			$this->collections[$collection_path] = $this->parser->parse(
-				file_get_contents($target_file)
+				file_get_contents($target_file),
+				TRUE
 			);
 		}
 
