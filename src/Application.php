@@ -157,7 +157,7 @@ class Application
 			}
 		}
 
-		$aliases = $this->broker->inspect(NULL, $this->broker::I_ALIASES)[$this->broker::I_ALIASES];
+		$aliases = $this->broker->inspect(NULL, Broker::I_ALIASES)[Broker::I_ALIASES];
 
 		if (isset($aliases['psr\log\loggerinterface'])) {
 			$logger = $this->broker->make('Psr\Log\LoggerInterface');
