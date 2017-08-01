@@ -73,7 +73,14 @@ class Application
 	 */
 	public function getDirectory($path = NULL, $create = FALSE)
 	{
-		return rtrim($this->root . DIRECTORY_SEPARATOR . $path, '\\/');
+		$exists = $this->hasDirectory($path);
+		$path   = $this->root . DIRECTORY_SEPARATOR . $path;
+
+		if (!$exists && $create) {
+			mkdir($path, 0777, TRUE);
+		}
+
+		return rtrim($path, '\\/');
 	}
 
 
