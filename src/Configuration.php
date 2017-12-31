@@ -3,12 +3,20 @@
 namespace Hiraeth;
 
 use Dotink\Jin;
+use Dotink\Flourish\Collection;
+use RuntimeException;
 
 /**
  *
  */
 class Configuration
 {
+	/**
+	 *
+	 */
+	protected $cacheFile = NULL;
+
+
 	/**
 	 *
 	 */
@@ -24,9 +32,16 @@ class Configuration
 	/**
 	 *
 	 */
-	public function __construct(Jin\Parser $parser)
+	protected $stale = FALSE;
+
+
+	/**
+	 *
+	 */
+	public function __construct(Jin\Parser $parser, $cache_file = NULL)
 	{
-		$this->parser = $parser;
+		$this->parser    = $parser;
+		$this->cacheFile = $cache_file;
 	}
 
 
@@ -56,9 +71,53 @@ class Configuration
 	/**
 	 *
 	 */
-	public function load($directory, $base = NULL)
+	public function load($directory)
 	{
-		$base            = $base ?: $directory;
+		if ($this->cacheFile && is_readable($this->cacheFile)) {
+			$data = include($this->cacheFile);
+
+			if (is_array($data)) {
+				foreach ($data as $path => $config) {
+					$this->collections[$path] = new Collection($config);
+				}
+
+				return TRUE;
+			}
+		}
+
+		$this->loadFromDirectory($directory, $directory);
+	}
+
+
+	/**
+	 *
+	 */
+	public function save()
+	{
+		if (!$this->cacheFile) {
+			throw new RuntimeException('Cannot save configuration to cache, unspecified file');
+		}
+
+		if ($this->stale) {
+			$collections = array();
+
+			foreach ($this->collections as $path => $collection) {
+				$collections[$path] = $collection->get();
+			}
+
+			file_put_contents($this->cacheFile, sprintf(
+				'<?php return %s;',
+				var_export($collections, TRUE)
+			));
+		}
+	}
+
+
+	/**
+	 *
+	 */
+	protected function loadFromDirectory($directory, $base)
+	{
 		$target_files    = glob($directory . DIRECTORY_SEPARATOR . '*.jin');
 		$sub_directories = glob($directory . DIRECTORY_SEPARATOR . '*', GLOB_ONLYDIR);
 
@@ -73,10 +132,14 @@ class Configuration
 				file_get_contents($target_file),
 				TRUE
 			);
+
+			$this->stale = TRUE;
 		}
 
 		foreach ($sub_directories as $sub_directory) {
-			$this->load($sub_directory, $base);
+			$this->loadFromDirectory($sub_directory, $base);
 		}
+
+		return TRUE;
 	}
 }

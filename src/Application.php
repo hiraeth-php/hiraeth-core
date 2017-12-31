@@ -126,6 +126,8 @@ class Application
 	 */
 	public function run(Closure $post_boot)
 	{
+		class_alias('Auryn\Injector', 'Hiraeth\Broker');
+
 		if ($this->hasFile('.env')) {
 			$dotenv = new Dotenv\Dotenv($this->getDirectory());
 			$dotenv->load();
@@ -141,16 +143,26 @@ class Application
 			}
 		}
 
-		class_alias('Auryn\Injector', 'Hiraeth\Broker');
+		$config_path = $this->getDirectory($this->getEnvironment('CONFIG_PATH', 'config'));
+
+		if ($this->getEnvironment('CACHING', TRUE)) {
+			$cache_file = $this->getFile('writable/cache/' . md5($config_path), TRUE);
+		} else {
+			$cache_file = NULL;
+		}
 
 		$this->broker = new Broker();
-		$this->config = new Configuration(new Jin\Parser());
+		$this->config = new Configuration(new Jin\Parser(), $cache_file);
+
+		$this->config->load($config_path);
+
+		if ($cache_file) {
+			$this->config->save();
+		}
 
 		$this->broker->share($this);
 		$this->broker->share($this->broker);
 		$this->broker->share($this->config);
-
-		$this->config->load($this->getDirectory($this->getEnvironment('CONFIG_PATH', 'config')));
 
 		foreach ($this->config->get('*', 'application.delegates', array()) as $delegates) {
 			foreach ($delegates as $delegate) {
