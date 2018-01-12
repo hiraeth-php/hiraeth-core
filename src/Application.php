@@ -49,6 +49,15 @@ class Application
 	/**
 	 *
 	 */
+	public function basePath($path, $subpath = NULL)
+	{
+		return str_replace($this->getDirectory($subpath), '', $path);
+	}
+
+
+	/**
+	 *
+	 */
 	public function hasDirectory($path)
 	{
 		$path = $this->root . DIRECTORY_SEPARATOR . $path;
@@ -126,7 +135,9 @@ class Application
 	 */
 	public function run(Closure $post_boot)
 	{
-		class_alias('Auryn\Injector', 'Hiraeth\Broker');
+		if (!class_exists('Hiraeth\Broker')) {
+			class_alias('Auryn\Injector', 'Hiraeth\Broker');
+		}
 
 		if ($this->hasFile('.env')) {
 			$dotenv = new Dotenv\Dotenv($this->getDirectory());
