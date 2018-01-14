@@ -175,6 +175,17 @@ class Application
 		$this->broker->share($this->broker);
 		$this->broker->share($this->config);
 
+		foreach ($this->config->get('*', 'application.aliases', array()) as $aliases) {
+			foreach ($aliases as $target => $alias) {
+				if (class_exists($target)) {
+					class_alias($target, $alias);
+
+				} elseif (interface_exists($target)) {
+					$this->broker->alias($target, $alias);
+				}
+			}
+		}
+
 		foreach ($this->config->get('*', 'application.delegates', array()) as $delegates) {
 			foreach ($delegates as $delegate) {
 				$this->registerDelegate($delegate);
