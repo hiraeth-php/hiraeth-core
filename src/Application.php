@@ -23,6 +23,7 @@ class Application
 	 */
 	protected $config = NULL;
 
+
 	/**
 	 *
 	 */
@@ -143,6 +144,8 @@ class Application
 			$dotenv = new Dotenv\Dotenv($this->getDirectory());
 			$dotenv->load();
 		}
+
+		date_default_timezone_set($this->getEnvironment('TIMEZONE', 'UTC'));
 
 		$whoops = new Whoops\Run();
 
