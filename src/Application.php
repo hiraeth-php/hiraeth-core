@@ -180,7 +180,7 @@ class Application
 
 		foreach ($this->config->get('*', 'application.aliases', array()) as $aliases) {
 			foreach ($aliases as $target => $alias) {
-				if (class_exists($target)) {
+				if (class_exists($target) && !class_exists($alias)) {
 					class_alias($target, $alias);
 
 				} elseif (interface_exists($target)) {
