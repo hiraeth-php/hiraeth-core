@@ -15,6 +15,12 @@ class Application
 	/**
 	 *
 	 */
+	protected $aliases = array();
+
+
+	/**
+	 *
+	 */
 	protected $broker = NULL;
 
 
@@ -180,6 +186,8 @@ class Application
 
 		foreach ($this->config->get('*', 'application.aliases', array()) as $aliases) {
 			foreach ($aliases as $target => $alias) {
+				$this->aliases[$alias] = $target;
+
 				if (class_exists($target) && !class_exists($alias)) {
 					class_alias($target, $alias);
 
@@ -228,9 +236,8 @@ class Application
 
 		foreach ($delegate::getInterfaces() as $interface) {
 			$this->broker->alias($interface, $class);
-		}
 
-		$this->broker->delegate($class, $delegate);
+		}
 	}
 
 
@@ -241,6 +248,17 @@ class Application
 	{
 		foreach ($provider::getInterfaces() as $interface) {
 			$this->broker->prepare($interface, $provider);
+
+			//
+			// This is a workaround for Auryn which does not resolve class_alias() created aliases
+			// for classes/interfaces on prepare.  As such, we must register the provider under
+			// the aliases as well.
+			//
+
+			foreach (array_keys($this->aliases, $interface) as $alias) {
+				$this->broker->prepare($alias, $provider);
+			}
 		}
 	}
 }
+
