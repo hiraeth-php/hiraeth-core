@@ -236,8 +236,9 @@ class Application
 
 		foreach ($delegate::getInterfaces() as $interface) {
 			$this->broker->alias($interface, $class);
-
 		}
+
+		$this->broker->delegate($class, $delegate);
 	}
 
 
