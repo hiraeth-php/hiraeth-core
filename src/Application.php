@@ -2,15 +2,17 @@
 
 namespace Hiraeth;
 
-use Dotenv;
-use Whoops;
 use Closure;
 use Dotink\Jin;
+use SlashTrace\SlashTrace;
+use Psr\Log\LoggerInterface;
+use Psr\Log\AbstractLogger;
+use Ramsey\Uuid\Uuid;
 
 /**
  *
  */
-class Application
+class Application extends AbstractLogger
 {
 	/**
 	 *
@@ -33,7 +35,37 @@ class Application
 	/**
 	 *
 	 */
+	protected $debugging = NULL;
+
+
+	/**
+	 *
+	 */
+	protected $environment = NULL;
+
+
+	/**
+	 *
+	 */
+	protected $id = NULL;
+
+
+	/**
+	 *
+	 */
 	protected $loader = NULL;
+
+
+	/**
+	 *
+	 */
+	protected $logger = NULL;
+
+
+	/**
+	 *
+	 */
+	protected $parser = NULL;
 
 
 	/**
@@ -45,20 +77,59 @@ class Application
 	/**
 	 *
 	 */
-	public function __construct($root_path, $loader)
-	{
-		$this->root   = $root_path;
-		$this->loader = $loader;
-	}
-
+	protected $tracer = NULL;
 
 
 	/**
 	 *
 	 */
-	public function basePath($path, $subpath = NULL)
+	public function __construct($root_path, $loader, $env_file = '.env', $release_file = '.release')
 	{
-		return str_replace($this->getDirectory($subpath), '', $path);
+		if (!class_exists('Hiraeth\Broker')) {
+			class_alias('Auryn\Injector', 'Hiraeth\Broker');
+		}
+
+		$this->root   = $root_path;
+		$this->loader = $loader;
+		$this->tracer = new SlashTrace();
+		$this->parser = new Jin\Parser();
+
+		if ($this->hasFile($release_file)) {
+			$this->release = $this->parser->parse(file_get_contents($this->getFile($release_file)));
+		}
+
+		if ($this->hasFile($env_file)) {
+			$this->environment = $this->parser->parse(file_get_contents($this->getFile($env_file)));
+
+			foreach ($this->environment->flatten() as $name => $value) {
+				$_ENV[$name] = $value;
+			}
+		}
+
+		if ($this->isDebugging()) {
+			$this->tracer->addHandler(new DebuggingHandler());
+		} else {
+			$this->tracer->addHandler(new ProductionHandler($this));
+		}
+
+		$this->tracer->setRelease($this->release ? $this->release->get() : NULL);
+		$this->tracer->setApplicationPath($this->root);
+		$this->tracer->register();
+
+		$this->broker = new Broker();
+		$this->config = $this->broker->make(Configuration::class, [
+			':cache_dir' => $this->getEnvironment('CACHING', TRUE)
+				? $this->getDirectory('writable/cache', TRUE)
+				: NULL
+		]);
+
+		$this->broker->share($this);
+		$this->broker->share($this->broker);
+		$this->broker->share($this->config);
+		$this->broker->share($this->tracer);
+		$this->broker->share($this->loader);
+
+		date_default_timezone_set($this->getEnvironment('TIMEZONE', 'UTC'));
 	}
 
 
@@ -87,6 +158,41 @@ class Application
 	/**
 	 *
 	 */
+	public function isCLI()
+	{
+		return (
+			defined('STDIN')
+			|| php_sapi_name() === 'cli'
+			|| !array_key_exists('REQUEST_METHOD', $_SERVER)
+		);
+	}
+
+
+	/**
+	 *
+	 */
+	public function isDebugging()
+	{
+		if (!isset($this->debugging)) {
+			$this->debugging = $this->hasFile('.debug');
+		}
+
+		return $this->debugging;
+	}
+
+
+	/**
+	 *
+	 */
+	public function getConfig($collection_name, $key, $default)
+	{
+		return $this->config->get($collection_name, $key, $default);
+	}
+
+
+	/**
+	 *
+	 */
 	public function getDirectory($path = NULL, $create = FALSE)
 	{
 		$exists = $this->hasDirectory($path);
@@ -96,22 +202,16 @@ class Application
 			mkdir($path, 0777, TRUE);
 		}
 
-		return rtrim($path, '\\/');
+		return new \SplFileInfo(rtrim($path, '\\/'));
 	}
 
 
 	/**
 	 *
 	 */
-	public function getEnvironment($name, $default = NULL)
+	public function getEnvironment($name, $default)
 	{
-		$value = getenv($name);
-
-		if ($value === FALSE) {
-			return $default;
-		} else {
-			return $value;
-		}
+		return $this->environment->get($name, $default);
 	}
 
 
@@ -133,7 +233,45 @@ class Application
 			file_put_contents($path, '');
 		}
 
-		return $path;
+		return new \SplFileInfo($path);
+	}
+
+
+	/**
+	 *
+	 */
+	public function getId()
+	{
+		if (!$this->id) {
+			$this->id = Uuid::uuid4();
+		}
+
+		return $this->id;
+	}
+
+
+	/**
+	 * Logs with an arbitrary level.
+	 *
+	 * @param mixed $level
+	 * @param string $message
+	 * @param array $context
+	 * @return void
+	 */
+	public function log($level, $message, array $context = array())
+	{
+		if (isset($this->logger)) {
+			$this->logger->log($level, $message, $context);
+		}
+	}
+
+
+	/**
+	 *
+	 */
+	public function record($message, array $context = array())
+	{
+		$this->tracer->recordBreadcrumb($message, $context);
 	}
 
 
@@ -142,51 +280,16 @@ class Application
 	 */
 	public function run(Closure $post_boot)
 	{
-		if (!class_exists('Hiraeth\Broker')) {
-			class_alias('Auryn\Injector', 'Hiraeth\Broker');
-		}
+		$this->record('Booting');
 
-		if ($this->hasFile('.env')) {
-			$dotenv = new Dotenv\Dotenv($this->getDirectory());
-			$dotenv->load();
-		}
+		$this->config->load(
+			$this->getDirectory($this->getEnvironment('CONFIG.DIR', 'config')),
+			$this->getEnvironment('CONFIG.SOURCES', ['default'])
+		);
 
-		date_default_timezone_set($this->getEnvironment('TIMEZONE', 'UTC'));
-
-		$whoops = new Whoops\Run();
-
-		if ($this->getEnvironment('DEBUG')) {
-			if (PHP_SAPI == 'cli') {
-				$whoops->register()->pushHandler(new Whoops\Handler\PlainTextHandler());
-			} else {
-				$whoops->register()->pushHandler(new Whoops\Handler\PrettyPageHandler());
-			}
-		}
-
-		$config_path = $this->getDirectory($this->getEnvironment('CONFIG_PATH', 'config'));
-
-		if ($this->getEnvironment('CACHING', TRUE)) {
-			$cache_file = $this->getFile('writable/cache/' . md5($config_path), TRUE);
-		} else {
-			$cache_file = NULL;
-		}
-
-		$this->broker = new Broker();
-		$this->config = new Configuration(new Jin\Parser(), $cache_file);
-
-		$this->config->load($config_path);
-
-		if ($cache_file) {
-			$this->config->save();
-		}
-
-		$this->broker->share($this);
-		$this->broker->share($this->broker);
-		$this->broker->share($this->config);
-
-		foreach ($this->config->get('*', 'application.aliases', array()) as $aliases) {
+		foreach ($this->getConfig('*', 'application.aliases', array()) as $aliases) {
 			foreach ($aliases as $target => $alias) {
-				$this->aliases[$alias] = $target;
+				$this->aliases[strtolower($alias)] = strtolower($target);
 
 				if (class_exists($target) && !class_exists($alias)) {
 					class_alias($target, $alias);
@@ -197,31 +300,29 @@ class Application
 			}
 		}
 
-		foreach ($this->config->get('*', 'application.delegates', array()) as $delegates) {
+		foreach ($this->getConfig('*', 'application.delegates', array()) as $delegates) {
 			foreach ($delegates as $delegate) {
 				$this->registerDelegate($delegate);
 			}
 		}
 
-		foreach ($this->config->get('*', 'application.providers', array()) as $providers) {
+		foreach ($this->getConfig('*', 'application.providers', array()) as $providers) {
 			foreach ($providers as $provider) {
 				$this->registerProvider($provider);
 			}
 		}
 
-		$aliases = $this->broker->inspect(NULL, Broker::I_ALIASES)[Broker::I_ALIASES];
+		if ($this->getEnvironment('LOGGING', TRUE)) {
+			if (in_array(strtolower(LoggerInterface::class), $this->aliases)) {
+				$this->logger = $this->broker->make(LoggerInterface::class);
+			}
 
-		if (isset($aliases['psr\log\loggerinterface'])) {
-			$logger = $this->broker->make('Psr\Log\LoggerInterface');
-
-			$whoops->register()->pushHandler(function($exception, $inspector, $run) use ($logger) {
-				$logger->error(sprintf(
-					'Message: %s, Trace: %s',
-					$exception->getMessage(),
-					$exception->getTraceAsString()
-				));
-			});
+			if ($this->logger) {
+				$this->broker->share($this->logger);
+			}
 		}
+
+		$this->record('Booting Completed');
 
 		return $this->broker->execute(Closure::bind($post_boot, $this, $this));
 	}
@@ -262,4 +363,3 @@ class Application
 		}
 	}
 }
-
