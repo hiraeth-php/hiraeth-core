@@ -290,7 +290,7 @@ class Application extends AbstractLogger
 
 		$this->config->load(
 			$this->getDirectory($this->getEnvironment('CONFIG.DIR', 'config')),
-			$this->getEnvironment('CONFIG.SOURCES', ['default'])
+			$this->getEnvironment('CONFIG.SOURCES', [])
 		);
 
 		foreach ($this->getConfig('*', 'application.aliases', array()) as $aliases) {
