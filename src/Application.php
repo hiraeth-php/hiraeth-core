@@ -71,6 +71,12 @@ class Application extends AbstractLogger
 	/**
 	 *
 	 */
+	protected $release = NULL;
+
+
+	/**
+	 *
+	 */
 	protected $root = NULL;
 
 
