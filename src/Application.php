@@ -123,13 +123,15 @@ class Application extends AbstractLogger
 		$this->tracer->register();
 
 		$this->broker = new Broker();
-		$this->config = $this->broker->make(Configuration::class, [
-			':cache_dir' => $this->getEnvironment('CACHING', TRUE)
+		$this->config = new Configuration(
+			$this->parser,
+			$this->getEnvironment('CACHING', TRUE)
 				? $this->getDirectory('writable/cache', TRUE)
 				: NULL
-		]);
+		);
 
 		$this->broker->share($this);
+		$this->broker->share($this->parser);
 		$this->broker->share($this->broker);
 		$this->broker->share($this->config);
 		$this->broker->share($this->tracer);
