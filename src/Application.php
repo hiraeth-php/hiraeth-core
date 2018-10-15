@@ -98,7 +98,9 @@ class Application extends AbstractLogger
 		$this->root   = $root_path;
 		$this->loader = $loader;
 		$this->tracer = new SlashTrace();
-		$this->parser = new Jin\Parser();
+		$this->parser = new Jin\Parser([
+			'app' => $this
+		]);
 
 		if ($this->hasFile($release_file)) {
 			$this->release = $this->parser->parse(file_get_contents($this->getFile($release_file)));
