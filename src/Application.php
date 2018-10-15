@@ -341,10 +341,6 @@ class Application extends AbstractLogger
 	{
 		$class = $delegate::getClass();
 
-		foreach ($delegate::getInterfaces() as $interface) {
-			$this->broker->alias($interface, $class);
-		}
-
 		$this->broker->delegate($class, $delegate);
 	}
 

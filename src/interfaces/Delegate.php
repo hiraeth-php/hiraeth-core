@@ -18,16 +18,6 @@ interface Delegate
 
 
 	/**
-	 * Get the interfaces for which the delegate operates.
-	 *
-	 * @static
-	 * @access public
-	 * @return array A list of interfaces for which the delegate provides a class
-	 */
-	static public function getInterfaces();
-
-
-	/**
 	 * Get the instance of the class for which the delegate operates.
 	 *
 	 * @access public
