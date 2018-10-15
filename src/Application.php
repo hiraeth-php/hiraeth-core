@@ -196,9 +196,15 @@ class Application extends AbstractLogger
 	/**
 	 *
 	 */
-	public function getConfig($collection_name, $key, $default)
+	public function getConfig($collection_name, $key, $default, $strict = FALSE)
 	{
-		return $this->config->get($collection_name, $key, $default);
+		$value = $this->config->get($collection_name, $key, $default);
+
+		if (!$strict && is_array($default)) {
+			$value = $value + $default;
+		}
+
+		return $value;
 	}
 
 
