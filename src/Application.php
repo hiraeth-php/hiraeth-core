@@ -110,7 +110,9 @@ class Application extends AbstractLogger
 			$this->environment = $this->parser->parse(file_get_contents($this->getFile($env_file)));
 
 			foreach ($this->environment->flatten() as $name => $value) {
+				$name        = str_replace('.', '_', $name);
 				$_ENV[$name] = $value;
+				@putenv("$name=$value");
 			}
 		}
 
