@@ -142,6 +142,21 @@ class Application extends AbstractLogger
 	/**
 	 *
 	 */
+	public function basePath($path, $source, $destination)
+	{
+		$root = $this->getDirectory()->getPathname();
+
+		if (strpos($path, $root) === 0) {
+			$path = str_replace($root, '', $path);
+		}
+
+		return str_replace($source, $destination, $path);
+	}
+
+
+	/**
+	 *
+	 */
 	public function hasDirectory($path)
 	{
 		$path = $this->root . DIRECTORY_SEPARATOR . $path;
