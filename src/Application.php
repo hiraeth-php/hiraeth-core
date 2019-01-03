@@ -148,9 +148,12 @@ class Application extends AbstractLogger
 
 		if (strpos($path, $root) === 0) {
 			$path = str_replace($root, '', $path);
+
+			return str_replace($source, $destination, $path);
 		}
 
-		return str_replace($source, $destination, $path);
+		return '/' . $destination . substr($path, strpos($path, $source) + strlen($source));
+
 	}
 
 
