@@ -74,9 +74,17 @@ class Configuration
 	public function load($directory, array $sources = NULL)
 	{
 		$cache_hash = md5($directory);
-		$cache_path = $this->cacheDir . '/' . $cache_hash;
+		$cache_path = $this->cacheDir
+			? $this->cacheDir . '/' . $cache_hash
+			: NULL;
 
-		if ($this->cacheDir && is_readable($cache_path)) {
+		if ($cache_path && is_file($cache_path)) {
+			if (!is_readable($cache_path)) {
+				//
+				// TODO: Throw Exception
+				//
+			}
+
 			$data = include($cache_path);
 
 			if (is_array($data)) {
@@ -95,8 +103,23 @@ class Configuration
 			$this->loadFromDirectory($directory);
 		}
 
-		if ($this->cacheDir && is_writable($cache_path)) {
-			$this->save($cache_hash);
+		if ($cache_path) {
+			if (is_file($cache_path) && !is_writable($cache_path)) {
+				//
+				// TODO: Throw Exception
+				//
+
+			} elseif (!is_writable(dirname($cache_path))) {
+				//
+				// TODO: Throw Exception
+				//
+
+			} else {
+				file_put_contents($cache_path, sprintf(
+					'<?php return %s;',
+					var_export($this->collections, TRUE)
+				));
+			}
 		}
 	}
 
@@ -158,13 +181,11 @@ class Configuration
 	/**
 	 *
 	 */
-	protected function save($hash)
+	protected function save($cache_path)
 	{
-		if ($this->stale) {
-			file_put_contents($this->cacheDir . '/' . $hash, sprintf(
-				'<?php return %s;',
-				var_export($this->collections, TRUE)
-			));
+		if (!$cache_path || !$this->stale) {
+			return;
 		}
+
 	}
 }
