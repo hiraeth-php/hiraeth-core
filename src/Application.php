@@ -4,6 +4,7 @@ namespace Hiraeth;
 
 use Closure;
 use SplFileInfo;
+use RuntimeException;
 
 use Adbar\Dot;
 
@@ -295,7 +296,7 @@ class Application extends AbstractLogger
 			file_put_contents($path, '');
 		}
 
-		return new \SplFileInfo($path);
+		return new SplFileInfo($path);
 	}
 
 
@@ -433,13 +434,16 @@ class Application extends AbstractLogger
 		}
 
 		if ($this->getEnvironment('LOGGING', TRUE)) {
-			if (in_array(strtolower(LoggerInterface::class), $this->aliases)) {
-				$this->logger = $this->broker->make(LoggerInterface::class);
+			if (!in_array(strtolower(LoggerInterface::class), $this->aliases)) {
+				throw new RuntimeException(sprintf(
+					'Logging is enabled, but "%s" does not have a registered alias',
+					LoggerInterface::class
+				));
 			}
 
-			if ($this->logger) {
-				$this->broker->share($this->logger);
-			}
+			$this->logger = $this->broker->make(LoggerInterface::class);
+
+			$this->broker->share($this->logger);
 		}
 
 		$this->record('Booting Completed');
