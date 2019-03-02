@@ -4,6 +4,9 @@ namespace Hiraeth;
 
 /**
  * Providers add additional dependencies or configuration for objects of certain interfaces.
+ *
+ * Each provider operates on one or more interfaces and provides the interfaces that it is capable
+ * of providing for so that it can be registered easily with the application.
  */
 interface Provider
 {
@@ -13,14 +16,16 @@ interface Provider
 	 * @access public
 	 * @return array A list of interfaces for which the provider operates
 	 */
-	static public function getInterfaces();
+	static public function getInterfaces(): array;
 
 
 	/**
 	 * Prepare the instance.
 	 *
 	 * @access public
-	 * @return Object The prepared instance
+	 * @var object $instance The unprepared instance of the object
+	 * @var Broker $broker An instance of a dependency injector/broker
+	 * @return object The prepared instance
 	 */
-	public function __invoke($instance, Broker $broker);
+	public function __invoke(object $instance, Broker $broker): object;
 }

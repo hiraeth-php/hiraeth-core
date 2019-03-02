@@ -3,100 +3,149 @@
 namespace Hiraeth;
 
 use Closure;
+use SplFileInfo;
+
+use Adbar\Dot;
+
 use Dotink\Jin;
-use SlashTrace\SlashTrace;
+
+use Composer\Autoload\ClassLoader;
+
 use Psr\Log\LoggerInterface;
 use Psr\Log\AbstractLogger;
-use Ramsey\Uuid\Uuid;
+
+use SlashTrace\SlashTrace;
 
 /**
+ * Hiraeth application
  *
+ * The application handles essentially all low level functionality that is central to any Hiraeth
+ * application.  This includes:
+ *
+ * - Application relative file/folder requisition
+ * - Application logging (proxy for registered PSR-3 logger)
+ * - Environment / Configuration Setup
+ * - Bootstrapping and hand-off
+ *
+ * This class probably does too much, or not enough.
  */
 class Application extends AbstractLogger
 {
 	/**
+	 * A list of interface and/or class aliases
 	 *
+	 * @access protected
+	 * @var array
 	 */
 	protected $aliases = array();
 
 
 	/**
+	 * An instance of our dependency injector/broker
 	 *
+	 * @access protected
+	 * @var Hiraeth\Broker
 	 */
 	protected $broker = NULL;
 
 
 	/**
+	 * An instance of our configuration
 	 *
+	 * @access protected
+	 * @var Hiraeth\Configuration
 	 */
 	protected $config = NULL;
 
 
 	/**
+	 * Debugging mode signifier
 	 *
+	 * @access protected
+	 * @var bool
 	 */
 	protected $debugging = NULL;
 
 
 	/**
+	 * A dot collection containing environment data
 	 *
+	 * @access protected
+	 * @var Adbar\Dot
 	 */
 	protected $environment = NULL;
 
 
 	/**
+	 * Unique application ID
 	 *
+	 * @access protected
+	 * @var string
 	 */
 	protected $id = NULL;
 
 
 	/**
+	 * The instance of our PSR-3 Logger
 	 *
-	 */
-	protected $loader = NULL;
-
-
-	/**
-	 *
+	 * @access protected
+	 * @var LoggerInterface
 	 */
 	protected $logger = NULL;
 
 
 	/**
+	 * The instance of our JIN Parser
 	 *
+	 * @access protected
+	 * @var Jin\Parser
 	 */
 	protected $parser = NULL;
 
 
 	/**
+	 * The dot collection containing release data
 	 *
+	 * @access protected
+	 * @var Adbar\Dot
 	 */
 	protected $release = NULL;
 
 
 	/**
+	 * Absolute path to the application root
 	 *
+	 * @access protected
+	 * @var string
 	 */
 	protected $root = NULL;
 
 
 	/**
+	 * The instance of tracer
 	 *
+	 * @access protected
+	 * @var SlashTrace
 	 */
 	protected $tracer = NULL;
 
 
 	/**
+	 * Construct the application
 	 *
+	 * @access public
+	 * @param string $root_path The absolute path to the application root
+	 * @param string $env_file The relative path to the .env file
+	 * @param string $release_file The relative path to the .release file
+	 * @return void
 	 */
-	public function __construct($root_path, $loader, $env_file = '.env', $release_file = '.release')
+	public function __construct(string $root_path, string $env_file = '.env', string $release_file = '.release')
 	{
 		if (!class_exists('Hiraeth\Broker')) {
 			class_alias('Auryn\Injector', 'Hiraeth\Broker');
 		}
 
 		$this->root   = $root_path;
-		$this->loader = $loader;
 		$this->tracer = new SlashTrace();
 		$this->parser = new Jin\Parser([
 			'app' => $this
@@ -122,15 +171,16 @@ class Application extends AbstractLogger
 			$this->tracer->addHandler(new ProductionHandler($this));
 		}
 
-		$this->tracer->setRelease($this->release ? $this->release->get() : NULL);
+		$this->tracer->setRelease($this->getRelease(NULL, []));
 		$this->tracer->setApplicationPath($this->root);
 		$this->tracer->register();
+
 
 		$this->broker = new Broker();
 		$this->config = new Configuration(
 			$this->parser,
 			$this->getEnvironment('CACHING', TRUE)
-				? $this->getDirectory('writable/cache', TRUE)
+				? $this->getDirectory('storage/cache', TRUE)
 				: NULL
 		);
 
@@ -139,7 +189,7 @@ class Application extends AbstractLogger
 		$this->broker->share($this->broker);
 		$this->broker->share($this->config);
 		$this->broker->share($this->tracer);
-		$this->broker->share($this->loader);
+
 
 		date_default_timezone_set($this->getEnvironment('TIMEZONE', 'UTC'));
 	}
@@ -160,6 +210,114 @@ class Application extends AbstractLogger
 
 		return '/' . $destination . substr($path, strpos($path, $source) + strlen($source));
 
+	}
+
+
+	/**
+	 * Get configuration data from the a configuration collection
+	 *
+	 * @access public
+	 * @var string $collection The name of the collection from which to fetch data
+	 * @var string $path The dot separated path to the data
+	 * @var mixed $default The default value, should the data not exist in the configuration
+	 * @return mixed The value as retrieved from the configuration collection, or default
+	 */
+	public function getConfig(string $collection, string $path, $default)
+	{
+		$value = $this->config->get($collection, $path, $default);
+
+		if (is_array($default)) {
+			$value = $value + $default;
+		}
+
+		return $value;
+	}
+
+
+	/**
+	 * Get a directory for an app relative path
+	 *
+	 * @access public
+	 * @var string $path The relative path for the directory, e.g. 'writable/public'
+	 * @var bool $create Whether or not the directory should be created if it does not exist
+	 * @return SplFileInfo An SplFileInfo object referencing the directory
+	 */
+	public function getDirectory(string $path = NULL, bool $create = FALSE): SplFileInfo
+	{
+		$exists = $this->hasDirectory($path);
+		$path   = $this->root . DIRECTORY_SEPARATOR . $path;
+
+		if (!$exists && $create) {
+			mkdir($path, 0777, TRUE);
+		}
+
+		return new SplFileInfo(rtrim($path, '\\/'));
+	}
+
+
+	/**
+	 * Get a value or all values from the environment
+	 *
+	 * If no arguments are supplied, this method will return all environment data as an
+	 * array.
+	 *
+	 * @access public
+	 * @var string $name The name of the environment variable
+	 * @var mixed $default The default data, should the data not exist in the environment
+	 * @return mixed The value as retrieved from the environment, or default
+	 */
+	public function getEnvironment(string $name = NULL, $default = NULL)
+	{
+		return $this->environment->get($name, $default);
+	}
+
+
+	/**
+	 * Get a file for an app relative path
+	 *
+	 * @access public
+	 * @var string $path The relative path for the file, e.g. 'writable/public/logo.jpg'
+	 * @var bool $create Whether or not the file should be created if it does not exist
+	 * @return SplFileInfo An SplFileInfo object referencing the directory
+	 */
+	public function getFile(string $path, bool $create = FALSE): SplFileInfo
+	{
+		$exists = $this->hasFile($path);
+		$path   = $this->root . DIRECTORY_SEPARATOR . $path;
+
+		if (!$exists && $create) {
+			$directory = dirname($path);
+
+			if (!is_dir($directory)) {
+				mkdir($directory, 0777, TRUE);
+			}
+
+			file_put_contents($path, '');
+		}
+
+		return new \SplFileInfo($path);
+	}
+
+
+	/**
+	 *
+	 */
+	public function getId()
+	{
+		if (!isset($this->id)) {
+			$this->id = md5(uniqid(static::class));
+		}
+
+		return $this->id;
+	}
+
+
+	/**
+	 *
+	 */
+	public function getRelease($name = NULL, $default = NULL)
+	{
+		return $this->release->get($name, $default);
 	}
 
 
@@ -210,80 +368,6 @@ class Application extends AbstractLogger
 		return $this->debugging;
 	}
 
-
-	/**
-	 *
-	 */
-	public function getConfig($collection_name, $key, $default, $strict = FALSE)
-	{
-		$value = $this->config->get($collection_name, $key, $default);
-
-		if (!$strict && is_array($default)) {
-			$value = $value + $default;
-		}
-
-		return $value;
-	}
-
-
-	/**
-	 *
-	 */
-	public function getDirectory($path = NULL, $create = FALSE)
-	{
-		$exists = $this->hasDirectory($path);
-		$path   = $this->root . DIRECTORY_SEPARATOR . $path;
-
-		if (!$exists && $create) {
-			mkdir($path, 0777, TRUE);
-		}
-
-		return new \SplFileInfo(rtrim($path, '\\/'));
-	}
-
-
-	/**
-	 *
-	 */
-	public function getEnvironment($name, $default)
-	{
-		return $this->environment->get($name, $default);
-	}
-
-
-	/**
-	 *
-	 */
-	public function getFile($path, $create = FALSE)
-	{
-		$exists = $this->hasFile($path);
-		$path   = $this->root . DIRECTORY_SEPARATOR . $path;
-
-		if (!$exists && $create) {
-			$directory = dirname($path);
-
-			if (!is_dir($directory)) {
-				mkdir($directory, 0777, TRUE);
-			}
-
-			file_put_contents($path, '');
-		}
-
-		return new \SplFileInfo($path);
-	}
-
-
-	/**
-	 *
-	 */
-	public function getId()
-	{
-		if (!$this->id) {
-			$this->id = Uuid::uuid4();
-		}
-
-		return $this->id;
-	}
 
 
 	/**
