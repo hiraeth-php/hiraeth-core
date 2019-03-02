@@ -10,7 +10,7 @@
         }
     ],
     "require": {
-	"php": ">=7.3",
+	"php": ">=7.2",
         "dotink/jin": "^3.1",
         "rdlowrey/auryn": "^1.4",
         "slashtrace/slashtrace": "^1.0"
