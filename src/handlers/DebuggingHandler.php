@@ -13,7 +13,26 @@ use SlashTrace\EventHandler\DebugHandler;
  */
 class DebuggingHandler extends DebugHandler
 {
-	//
-	// Nice, nothing overloaded!
-	//
+	/**
+	 *
+	 */
+	public function __construct(Application $app)
+	{
+		$this->app = $app;
+	}
+
+
+	/**
+	 * Exception handler
+	 *
+	 * @access public
+	 * @var Exception $exception The exception to be handled
+	 * @return void
+	 */
+	public function handleException($exception)
+	{
+		if ($this->app->isDebugging()) {
+			return parent::handleException($exception);
+		}
+	}
 }

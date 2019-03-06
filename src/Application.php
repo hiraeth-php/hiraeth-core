@@ -148,23 +148,17 @@ class Application extends AbstractLogger
 
 		$this->root   = $root_path;
 		$this->tracer = new SlashTrace();
-		$this->parser = new Jin\Parser([
-			'app' => $this
-		]);
+		$this->parser = new Jin\Parser(['app' => $this]);
+
+		$this->tracer->addHandler(new DebuggingHandler($this));
+		$this->tracer->addHandler(new ProductionHandler($this));
+		$this->tracer->setApplicationPath($this->getDirectory());
+		$this->tracer->register();
 
 		if ($this->hasFile($release_file)) {
 			$this->release = $this->parser->parse(file_get_contents($this->getFile($release_file)));
+			$this->tracer->setRelease($this->getRelease());
 		}
-
-		if ($this->isDebugging()) {
-			$this->tracer->addHandler(new DebuggingHandler());
-		} else {
-			$this->tracer->addHandler(new ProductionHandler($this));
-		}
-
-		$this->tracer->setRelease($this->getRelease());
-		$this->tracer->setApplicationPath($this->root);
-		$this->tracer->register();
 
 		if ($this->hasFile($env_file)) {
 			$this->environment = $this->parser->parse(file_get_contents($this->getFile($env_file)));
@@ -362,7 +356,15 @@ class Application extends AbstractLogger
 	public function isDebugging()
 	{
 		if (!isset($this->debugging)) {
-			$this->debugging = $this->hasFile('.debug');
+			if (!$this->environment) {
+				//
+				// If the environment is not initialized only use the file and dont' store result
+				//
+
+				return $this->hasFile('.debug');
+			}
+
+			$this->debugging = $this->hasFile('.debug') || $this->getEnvironment('DEBUG', FALSE);
 		}
 
 		return $this->debugging;
