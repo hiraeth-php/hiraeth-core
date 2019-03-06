@@ -139,7 +139,7 @@ class ProductionHandler implements EventHandler
 	{
 		$this->user = [
 			'id'    => $user->getId(),
-			'name'  => $user->getname(),
+			'name'  => $user->getName(),
 			'email' => $user->getEmail()
 		];
 	}
