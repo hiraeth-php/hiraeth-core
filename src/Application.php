@@ -156,6 +156,16 @@ class Application extends AbstractLogger
 			$this->release = $this->parser->parse(file_get_contents($this->getFile($release_file)));
 		}
 
+		if ($this->isDebugging()) {
+			$this->tracer->addHandler(new DebuggingHandler());
+		} else {
+			$this->tracer->addHandler(new ProductionHandler($this));
+		}
+
+		$this->tracer->setRelease($this->getRelease());
+		$this->tracer->setApplicationPath($this->root);
+		$this->tracer->register();
+
 		if ($this->hasFile($env_file)) {
 			$this->environment = $this->parser->parse(file_get_contents($this->getFile($env_file)));
 
@@ -165,17 +175,6 @@ class Application extends AbstractLogger
 				@putenv("$name=$value");
 			}
 		}
-
-		if ($this->isDebugging()) {
-			$this->tracer->addHandler(new DebuggingHandler());
-		} else {
-			$this->tracer->addHandler(new ProductionHandler($this));
-		}
-
-		$this->tracer->setRelease($this->getRelease(NULL, []));
-		$this->tracer->setApplicationPath($this->root);
-		$this->tracer->register();
-
 
 		$this->broker = new Broker();
 		$this->config = new Configuration(
