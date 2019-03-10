@@ -60,15 +60,6 @@ class Application extends AbstractLogger
 
 
 	/**
-	 * Debugging mode signifier
-	 *
-	 * @access protected
-	 * @var bool
-	 */
-	protected $debugging = NULL;
-
-
-	/**
 	 * A dot collection containing environment data
 	 *
 	 * @access protected
@@ -140,7 +131,7 @@ class Application extends AbstractLogger
 	 * @param string $release_file The relative path to the .release file
 	 * @return void
 	 */
-	public function __construct(string $root_path, string $env_file = '.env', string $release_file = '.release')
+	public function __construct(string $root_path, string $env_file = '.env', string $release_file = 'local/.release')
 	{
 		if (!class_exists('Hiraeth\Broker')) {
 			class_alias('Auryn\Injector', 'Hiraeth\Broker');
@@ -152,8 +143,11 @@ class Application extends AbstractLogger
 
 		$this->tracer->addHandler(new DebuggingHandler($this));
 		$this->tracer->addHandler(new ProductionHandler($this));
-		$this->tracer->setApplicationPath($this->getDirectory());
 		$this->tracer->register();
+
+		if ($this->hasDirectory(NULL)) {
+			$this->tracer->setApplicationPath($this->getDirectory()->getPathname());
+		}
 
 		if ($this->hasFile($release_file)) {
 			$this->release = $this->parser->parse(file_get_contents($this->getFile($release_file)));
@@ -183,7 +177,6 @@ class Application extends AbstractLogger
 		$this->broker->share($this->broker);
 		$this->broker->share($this->config);
 		$this->broker->share($this->tracer);
-
 
 		date_default_timezone_set($this->getEnvironment('TIMEZONE', 'UTC'));
 	}
@@ -262,7 +255,17 @@ class Application extends AbstractLogger
 	 */
 	public function getEnvironment(string $name = NULL, $default = NULL)
 	{
-		return $this->environment->get($name, $default);
+		if (!$this->environment) {
+			return $default;
+		}
+
+		$value = $this->environment->get($name, $default);
+
+		if (is_array($default)) {
+			$value = $value + $default;
+		}
+
+		return $value;
 	}
 
 
@@ -355,25 +358,17 @@ class Application extends AbstractLogger
 	 */
 	public function isDebugging()
 	{
-		if (!isset($this->debugging)) {
-			if (!$this->environment) {
-				//
-				// If the environment is not initialized only use the file and dont' store result
-				//
-
-				return $this->hasFile('.debug');
-			}
-
-			$this->debugging = $this->hasFile('.debug') || $this->getEnvironment('DEBUG', FALSE);
+		if ($this->environment) {
+			return $this->getEnvironment('DEBUG', FALSE);
 		}
 
-		return $this->debugging;
+		return TRUE;
 	}
 
 
 
 	/**
-	 * Logs with an arbitrary level.
+	 * Logs a message with an arbitrary level.
 	 *
 	 * @param mixed $level
 	 * @param string $message
@@ -384,6 +379,17 @@ class Application extends AbstractLogger
 	{
 		if (isset($this->logger)) {
 			$this->logger->log($level, $message, $context);
+		}
+	}
+
+
+	/**
+	 *
+	 */
+	public function make(string $alias): object
+	{
+		if (isset($this->broker)) {
+			return $this->broker->make($alias);
 		}
 	}
 
@@ -449,26 +455,40 @@ class Application extends AbstractLogger
 
 		$this->record('Booting Completed');
 
-		return $this->broker->execute(Closure::bind($post_boot, $this, $this));
+		exit($this->broker->execute(Closure::bind($post_boot, $this, $this)));
 	}
 
 
 	/**
 	 *
 	 */
-	protected function registerDelegate($delegate)
+	protected function registerDelegate($delegate): object
 	{
-		$class = $delegate::getClass();
+		if (!isset(class_implements($delegate)[Delegate::class])) {
+			throw new RuntimeException(sprintf(
+				'Cannot register delegate "%s", does not implemented Hiraeth\Delegate',
+				$delegate
+			));
+		}
 
-		$this->broker->delegate($class, $delegate);
+		$this->broker->delegate($delegate::getClass(), $delegate);
+
+		return $this;
 	}
 
 
 	/**
 	 *
 	 */
-	protected function registerProvider($provider)
+	protected function registerProvider($provider): object
 	{
+		if (!isset(class_implements($provider)[Provider::class])) {
+			throw new RuntimeException(sprintf(
+				'Cannot register provider "%s", does not implemented Hiraeth\Provider',
+				$provider
+			));
+		}
+
 		foreach ($provider::getInterfaces() as $interface) {
 			$this->broker->prepare($interface, $provider);
 
@@ -482,5 +502,7 @@ class Application extends AbstractLogger
 				$this->broker->prepare($alias, $provider);
 			}
 		}
+
+		return $this;
 	}
 }
