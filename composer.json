@@ -11,7 +11,7 @@
     ],
     "require": {
 	"php": ">=7.2",
-        "dotink/jin": "^3.1",
+        "dotink/jin": "^3.2",
         "rdlowrey/auryn": "^1.4",
         "slashtrace/slashtrace": "^1.0"
     },
