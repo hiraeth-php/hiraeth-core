@@ -334,7 +334,7 @@ class Application extends AbstractLogger implements ContainerInterface
 	 */
 	public function has($alias)
 	{
-		return in_array(strtolower($alias), $this->aliases));
+		return in_array(strtolower($alias), $this->aliases);
 	}
 
 
