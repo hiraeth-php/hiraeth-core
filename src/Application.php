@@ -12,6 +12,8 @@ use Dotink\Jin;
 
 use Composer\Autoload\ClassLoader;
 
+use Psr\Container\ContainerInterface;
+
 use Psr\Log\LoggerInterface;
 use Psr\Log\AbstractLogger;
 
@@ -30,7 +32,7 @@ use SlashTrace\SlashTrace;
  *
  * This class probably does too much, or not enough.
  */
-class Application extends AbstractLogger
+class Application extends AbstractLogger implements ContainerInterface
 {
 	/**
 	 * A list of interface and/or class aliases
@@ -201,6 +203,15 @@ class Application extends AbstractLogger
 
 
 	/**
+	 *
+	 */
+	public function get($alias)
+	{
+		return $this->broker->make($alias);
+	}
+
+
+	/**
 	 * Get configuration data from the a configuration collection
 	 *
 	 * @access public
@@ -321,6 +332,15 @@ class Application extends AbstractLogger
 	/**
 	 *
 	 */
+	public function has($alias)
+	{
+		return in_array(strtolower($alias), $this->aliases));
+	}
+
+
+	/**
+	 *
+	 */
 	public function hasDirectory($path)
 	{
 		$path = $this->root . DIRECTORY_SEPARATOR . $path;
@@ -386,17 +406,6 @@ class Application extends AbstractLogger
 	/**
 	 *
 	 */
-	public function make(string $alias): object
-	{
-		if (isset($this->broker)) {
-			return $this->broker->make($alias);
-		}
-	}
-
-
-	/**
-	 *
-	 */
 	public function record($message, array $context = array())
 	{
 		$this->tracer->recordBreadcrumb($message, $context);
@@ -441,16 +450,14 @@ class Application extends AbstractLogger
 		}
 
 		if ($this->getEnvironment('LOGGING', TRUE)) {
-			if (!in_array(strtolower(LoggerInterface::class), $this->aliases)) {
+			if (!$this->has(LoggerInterface::class)) {
 				throw new RuntimeException(sprintf(
 					'Logging is enabled, but "%s" does not have a registered alias',
 					LoggerInterface::class
 				));
 			}
 
-			$this->logger = $this->broker->make(LoggerInterface::class);
-
-			$this->broker->share($this->logger);
+			$this->logger = $this->broker->get(LoggerInterface::class);
 		}
 
 		$this->record('Booting Completed');
