@@ -467,7 +467,7 @@ class Application extends AbstractLogger implements ContainerInterface
 				));
 			}
 
-			$this->logger = $this->broker->get(LoggerInterface::class);
+			$this->logger = $this->get(LoggerInterface::class);
 		}
 
 		$this->record('Booting Completed');
