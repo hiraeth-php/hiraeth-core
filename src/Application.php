@@ -160,8 +160,8 @@ class Application extends AbstractLogger implements ContainerInterface
 			$this->environment = $this->parser->parse(file_get_contents($this->getFile($env_file)));
 
 			foreach ($this->environment->flatten() as $name => $value) {
-				$name        = str_replace('.', '_', $name);
-				$_ENV[$name] = $value;
+				$_ENV[$name = strtoupper(str_replace('.', '_', $name))] = $value;
+
 				@putenv("$name=$value");
 			}
 		}
@@ -220,9 +220,13 @@ class Application extends AbstractLogger implements ContainerInterface
 	 * @var mixed $default The default value, should the data not exist in the configuration
 	 * @return mixed The value as retrieved from the configuration collection, or default
 	 */
-	public function getConfig(string $collection, string $path, $default)
+	public function getConfig(string $collection, string $path, $default = NULL)
 	{
 		$value = $this->config->get($collection, $path, $default);
+
+		if ($default !== NULL) {
+			settype($value, gettype($default));
+		}
 
 		if (is_array($default)) {
 			$value = $value + $default;
@@ -266,11 +270,17 @@ class Application extends AbstractLogger implements ContainerInterface
 	 */
 	public function getEnvironment(string $name = NULL, $default = NULL)
 	{
-		if (!$this->environment) {
-			return $default;
+		if ($this->environment->has($name)) {
+			$value = $this->environment->get($name);
+		} elseif (getenv($name) !== FALSE) {
+			$value = getenv($name);
+		} else {
+			$value = $default;
 		}
 
-		$value = $this->environment->get($name, $default);
+		if ($default !== NULL) {
+			settype($value, gettype($default));
+		}
 
 		if (is_array($default)) {
 			$value = $value + $default;
