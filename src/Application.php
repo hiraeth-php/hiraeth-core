@@ -270,7 +270,7 @@ class Application extends AbstractLogger implements ContainerInterface
 	 */
 	public function getEnvironment(string $name = NULL, $default = NULL)
 	{
-		if ($this->environment->has($name)) {
+		if ($this->environment && $this->environment->has($name)) {
 			$value = $this->environment->get($name);
 		} elseif (getenv($name) !== FALSE) {
 			$value = getenv($name);
