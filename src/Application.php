@@ -135,10 +135,6 @@ class Application extends AbstractLogger implements ContainerInterface
 	 */
 	public function __construct(string $root_path, string $env_file = '.env', string $release_file = 'local/.release')
 	{
-		if (!class_exists('Hiraeth\Broker')) {
-			class_alias('Auryn\Injector', 'Hiraeth\Broker');
-		}
-
 		$this->root   = $root_path;
 		$this->tracer = new SlashTrace();
 		$this->parser = new Jin\Parser(['app' => $this]);
@@ -174,11 +170,9 @@ class Application extends AbstractLogger implements ContainerInterface
 				: NULL
 		);
 
-		$this->broker->share($this);
-		$this->broker->share($this->parser);
-		$this->broker->share($this->broker);
-		$this->broker->share($this->config);
-		$this->broker->share($this->tracer);
+		$this->share($this);
+		$this->share($this->broker);
+		$this->share($this->config);
 
 		date_default_timezone_set($this->getEnvironment('TIMEZONE', 'UTC'));
 	}
@@ -187,18 +181,54 @@ class Application extends AbstractLogger implements ContainerInterface
 	/**
 	 *
 	 */
-	public function basePath($path, $source, $destination)
+	public function exec(Closure $post_boot)
 	{
-		$root = $this->getDirectory()->getPathname();
+		$this->record('Booting');
 
-		if (strpos($path, $root) === 0) {
-			$path = str_replace($root, '', $path);
+		$this->config->load(
+			$this->getDirectory($this->getEnvironment('CONFIG.DIR', 'config')),
+			$this->getEnvironment('CONFIG.SOURCES', [])
+		);
 
-			return str_replace($source, $destination, $path);
+		foreach ($this->getConfig('*', 'application.aliases', array()) as $aliases) {
+			foreach ($aliases as $target => $alias) {
+				$this->aliases[strtolower($alias)] = strtolower($target);
+
+				if (class_exists($target) && !class_exists($alias)) {
+					class_alias($target, $alias);
+
+				} elseif (interface_exists($target)) {
+					$this->broker->alias($target, $alias);
+				}
+			}
 		}
 
-		return '/' . $destination . substr($path, strpos($path, $source) + strlen($source));
+		foreach ($this->getConfig('*', 'application.delegates', array()) as $delegates) {
+			foreach ($delegates as $delegate) {
+				$this->registerDelegate($delegate);
+			}
+		}
 
+		foreach ($this->getConfig('*', 'application.providers', array()) as $providers) {
+			foreach ($providers as $provider) {
+				$this->registerProvider($provider);
+			}
+		}
+
+		if ($this->getEnvironment('LOGGING', TRUE)) {
+			if (!$this->has(LoggerInterface::class)) {
+				throw new RuntimeException(sprintf(
+					'Logging is enabled, but "%s" does not have a registered alias',
+					LoggerInterface::class
+				));
+			}
+
+			$this->logger = $this->get(LoggerInterface::class);
+		}
+
+		$this->record('Booting Completed');
+
+		exit($this->broker->execute(Closure::bind($post_boot, $this, $this)));
 	}
 
 
@@ -344,7 +374,7 @@ class Application extends AbstractLogger implements ContainerInterface
 	 */
 	public function has($alias)
 	{
-		return in_array(strtolower($alias), $this->aliases);
+		return $this->broker->has($alias);
 	}
 
 
@@ -425,54 +455,9 @@ class Application extends AbstractLogger implements ContainerInterface
 	/**
 	 *
 	 */
-	public function run(Closure $post_boot)
+	public function share(object $instance)
 	{
-		$this->record('Booting');
-
-		$this->config->load(
-			$this->getDirectory($this->getEnvironment('CONFIG.DIR', 'config')),
-			$this->getEnvironment('CONFIG.SOURCES', [])
-		);
-
-		foreach ($this->getConfig('*', 'application.aliases', array()) as $aliases) {
-			foreach ($aliases as $target => $alias) {
-				$this->aliases[strtolower($alias)] = strtolower($target);
-
-				if (class_exists($target) && !class_exists($alias)) {
-					class_alias($target, $alias);
-
-				} elseif (interface_exists($target)) {
-					$this->broker->alias($target, $alias);
-				}
-			}
-		}
-
-		foreach ($this->getConfig('*', 'application.delegates', array()) as $delegates) {
-			foreach ($delegates as $delegate) {
-				$this->registerDelegate($delegate);
-			}
-		}
-
-		foreach ($this->getConfig('*', 'application.providers', array()) as $providers) {
-			foreach ($providers as $provider) {
-				$this->registerProvider($provider);
-			}
-		}
-
-		if ($this->getEnvironment('LOGGING', TRUE)) {
-			if (!$this->has(LoggerInterface::class)) {
-				throw new RuntimeException(sprintf(
-					'Logging is enabled, but "%s" does not have a registered alias',
-					LoggerInterface::class
-				));
-			}
-
-			$this->logger = $this->get(LoggerInterface::class);
-		}
-
-		$this->record('Booting Completed');
-
-		exit($this->broker->execute(Closure::bind($post_boot, $this, $this)));
+		$this->broker->share($instance);
 	}
 
 

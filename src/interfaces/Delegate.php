@@ -24,8 +24,8 @@ interface Delegate
 	 * Get the instance of the class for which the delegate operates.
 	 *
 	 * @access public
-	 * @param Broker $broker The dependency injector instance
+	 * @param Application $app The application instance for which the delegate operates
 	 * @return object The instance of the class for which the delegate operates
 	 */
-	public function __invoke(Broker $broker): object;
+	public function __invoke(Application $app): object;
 }
