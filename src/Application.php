@@ -458,6 +458,8 @@ class Application extends AbstractLogger implements ContainerInterface
 	public function share(object $instance)
 	{
 		$this->broker->share($instance);
+
+		return $instance;
 	}
 
 
