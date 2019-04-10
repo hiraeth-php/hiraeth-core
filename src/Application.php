@@ -10,6 +10,8 @@ use Adbar\Dot;
 
 use Dotink\Jin;
 
+use Defuse\Crypto\Key;
+
 use Composer\Autoload\ClassLoader;
 
 use Psr\Container\ContainerInterface;
@@ -77,6 +79,12 @@ class Application extends AbstractLogger implements ContainerInterface
 	 * @var string
 	 */
 	protected $id = NULL;
+
+
+	/**
+	 *
+	 */
+	protected $key = NULL;
 
 
 	/**
@@ -357,6 +365,31 @@ class Application extends AbstractLogger implements ContainerInterface
 		}
 
 		return $this->id;
+	}
+
+
+	/**
+	 *
+	 */
+	public function getKey()
+	{
+		if (!$this->key) {
+			if (!$this->hasFile('storage/key')) {
+				$this->key = Key::createNewRandomKey();
+
+				$this->getFile('storage/key', TRUE)->openFile('w')->fwrite(sprintf(
+					'<?php return %s;',
+					var_export($this->key->saveToAsciiSafeString(), TRUE)
+				));
+
+			} else {
+				$this->key = Key::loadFromAsciiSafeString(
+					include($this->getFile('storage/key')->getRealPath())
+				);
+			}
+		}
+
+		return $this->key;
 	}
 
 
