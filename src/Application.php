@@ -527,7 +527,11 @@ class Application extends AbstractLogger implements ContainerInterface
 		}
 
 		foreach ($provider::getInterfaces() as $interface) {
-			$this->broker->prepare($interface, $provider);
+			$wrapper = function($obj, Broker $broker) use ($provider) {
+				return $provider($obj, $this);
+			}
+
+			$this->broker->prepare($interface, $wrapper);
 
 			//
 			// This is a workaround for Auryn which does not resolve class_alias() created aliases
@@ -536,7 +540,7 @@ class Application extends AbstractLogger implements ContainerInterface
 			//
 
 			foreach (array_keys($this->aliases, $interface) as $alias) {
-				$this->broker->prepare($alias, $provider);
+				$this->broker->prepare($alias, $wrapper);
 			}
 		}
 
