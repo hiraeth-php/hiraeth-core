@@ -528,8 +528,8 @@ class Application extends AbstractLogger implements ContainerInterface
 
 		foreach ($provider::getInterfaces() as $interface) {
 			$wrapper = function($obj, Broker $broker) use ($provider) {
-				return $provider($obj, $this);
-			}
+				return $broker->execute($provider, [$obj]);
+			};
 
 			$this->broker->prepare($interface, $wrapper);
 
