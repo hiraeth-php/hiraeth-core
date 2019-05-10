@@ -457,7 +457,7 @@ class Application extends AbstractLogger implements ContainerInterface
 	/**
 	 *
 	 */
-	public function isDebugging()
+	public function isDebugging(): bool
 	{
 		if ($this->environment) {
 			return $this->getEnvironment('DEBUG', FALSE);
@@ -475,20 +475,24 @@ class Application extends AbstractLogger implements ContainerInterface
 	 * @param array $context
 	 * @return void
 	 */
-	public function log($level, $message, array $context = array())
+	public function log($level, $message, array $context = array()): Application
 	{
 		if (isset($this->logger)) {
 			$this->logger->log($level, $message, $context);
 		}
+
+		return $this;
 	}
 
 
 	/**
 	 *
 	 */
-	public function record($message, array $context = array())
+	public function record($message, array $context = array()): Application
 	{
 		$this->tracer->recordBreadcrumb($message, $context);
+
+		return $this;
 	}
 
 
@@ -497,14 +501,14 @@ class Application extends AbstractLogger implements ContainerInterface
 	 */
 	public function run($target, array $parameters = array())
 	{
-		$this->broker->execute($target, $parameters);
+		return $this->broker->execute($target, $parameters);
 	}
 
 
 	/**
 	 *
 	 */
-	public function share(object $instance)
+	public function share(object $instance): object
 	{
 		$this->broker->share($instance);
 
