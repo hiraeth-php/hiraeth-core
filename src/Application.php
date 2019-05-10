@@ -467,7 +467,6 @@ class Application extends AbstractLogger implements ContainerInterface
 	}
 
 
-
 	/**
 	 * Logs a message with an arbitrary level.
 	 *
@@ -490,6 +489,15 @@ class Application extends AbstractLogger implements ContainerInterface
 	public function record($message, array $context = array())
 	{
 		$this->tracer->recordBreadcrumb($message, $context);
+	}
+
+
+	/**
+	 *
+	 */
+	public function run($target, array $parameters = array())
+	{
+		$this->broker->execute($target, $parameters);
 	}
 
 
