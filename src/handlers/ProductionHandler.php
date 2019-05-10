@@ -77,13 +77,15 @@ class ProductionHandler implements EventHandler
 			'user'    => $this->user
 		]);
 
-		if ($this->app->isCLI()) {
-			exit($exception->getCode() ?: 1);
+		if (!$this->app->isDebugging()) {
+			if ($this->app->isCLI()) {
+				exit($exception->getCode() ?: 1);
 
-		} else {
-			header('HTTP/1.1 500 Internal Server Error');
-			echo 'Request cannot be completed at this time, please try again later.';
-			exit(500);
+			} else {
+				header('HTTP/1.1 500 Internal Server Error');
+				echo 'Request cannot be completed at this time, please try again later.';
+				exit(500);
+			}
 		}
 	}
 

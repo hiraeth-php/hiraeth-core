@@ -149,8 +149,8 @@ class Application extends AbstractLogger implements ContainerInterface
 		$this->tracer = new SlashTrace();
 		$this->parser = new Jin\Parser(['app' => $this]);
 
-		$this->tracer->addHandler(new DebuggingHandler($this));
-		$this->tracer->addHandler(new ProductionHandler($this));
+		$this->tracer->prependHandler(new DebuggingHandler($this));
+		$this->tracer->prependHandler(new ProductionHandler($this));
 		$this->tracer->register();
 
 		$this->broker->share($this);
@@ -235,7 +235,7 @@ class Application extends AbstractLogger implements ContainerInterface
 			$this->logger = $this->get(LoggerInterface::class);
 		}
 
-		if ($this->has(EventHandler::class)) {
+		if (!$this->isDebugging() && $this->has(EventHandler::class)) {
 			$this->tracer->prependHandler($this->get(EventHandler::class));
 		}
 
