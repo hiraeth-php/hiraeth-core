@@ -20,6 +20,7 @@ use Psr\Log\LoggerInterface;
 use Psr\Log\AbstractLogger;
 
 use SlashTrace\SlashTrace;
+use SlashTrace\EventHandler\EventHandler;
 
 /**
  * Hiraeth application
@@ -144,6 +145,7 @@ class Application extends AbstractLogger implements ContainerInterface
 	public function __construct(string $root_path, string $env_file = '.env', string $release_file = 'local/.release')
 	{
 		$this->root   = $root_path;
+		$this->broker = new Broker();
 		$this->tracer = new SlashTrace();
 		$this->parser = new Jin\Parser(['app' => $this]);
 
@@ -151,36 +153,22 @@ class Application extends AbstractLogger implements ContainerInterface
 		$this->tracer->addHandler(new ProductionHandler($this));
 		$this->tracer->register();
 
-		if ($this->hasDirectory(NULL)) {
-			$this->tracer->setApplicationPath($this->getDirectory()->getPathname());
+		$this->broker->share($this);
+
+		if (!$this->hasDirectory(NULL)) {
+			throw new RuntimeException(sprintf(
+				'Invalid root path "%s" specified, not a directory.',
+				$this->root
+			));
 		}
 
 		if ($this->hasFile($release_file)) {
 			$this->release = $this->parser->parse(file_get_contents($this->getFile($release_file)));
-			$this->tracer->setRelease($this->getRelease());
 		}
 
 		if ($this->hasFile($env_file)) {
 			$this->environment = $this->parser->parse(file_get_contents($this->getFile($env_file)));
-
-			foreach ($this->environment->flatten() as $name => $value) {
-				$_ENV[$name = strtoupper(str_replace('.', '_', $name))] = $value;
-
-				@putenv("$name=$value");
-			}
 		}
-
-		$this->broker = new Broker();
-		$this->config = new Configuration(
-			$this->parser,
-			$this->getEnvironment('CACHING', TRUE)
-				? $this->getDirectory('storage/cache', TRUE)
-				: NULL
-		);
-
-		$this->share($this);
-		$this->share($this->broker);
-		$this->share($this->config);
 
 		date_default_timezone_set($this->getEnvironment('TIMEZONE', 'UTC'));
 	}
@@ -191,7 +179,20 @@ class Application extends AbstractLogger implements ContainerInterface
 	 */
 	public function exec(Closure $post_boot)
 	{
-		$this->record('Booting');
+		if ($this->environment) {
+			$_ENV = $this->environment->get();
+
+			foreach ($this->environment->flatten() as $name => $value) {
+				@putenv("$name=$value");
+			}
+		}
+
+		$this->config = new Configuration(
+			$this->parser,
+			$this->getEnvironment('CACHING', TRUE)
+				? $this->getDirectory('storage/cache', TRUE)
+				: NULL
+		);
 
 		$this->config->load(
 			$this->getDirectory($this->getEnvironment('CONFIG.DIR', 'config')),
@@ -233,6 +234,13 @@ class Application extends AbstractLogger implements ContainerInterface
 
 			$this->logger = $this->get(LoggerInterface::class);
 		}
+
+		if ($this->has(EventHandler::class)) {
+			$this->tracer->prependHandler($this->get(EventHandler::class));
+		}
+
+		$this->tracer->setApplicationPath($this->getDirectory()->getPathname());
+		$this->tracer->setRelease($this->getRelease());
 
 		$this->record('Booting Completed');
 
