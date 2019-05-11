@@ -235,12 +235,12 @@ class Application extends AbstractLogger implements ContainerInterface
 			$this->logger = $this->get(LoggerInterface::class);
 		}
 
-		if (!$this->isDebugging() && $this->has(EventHandler::class)) {
-			$this->tracer->prependHandler($this->get(EventHandler::class));
+		foreach (array_reverse($this->getEnvironment('HANDLERS', [])) as $handler) {
+			$this->tracer->prependHandler($this->get($handler));
 		}
 
 		$this->tracer->setApplicationPath($this->getDirectory()->getPathname());
-		$this->tracer->setRelease($this->getRelease());
+		$this->tracer->setRelease($this->release->toJson());
 
 		$this->record('Booting Completed');
 
@@ -567,3 +567,4 @@ class Application extends AbstractLogger implements ContainerInterface
 		return $this;
 	}
 }
+
