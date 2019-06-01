@@ -200,14 +200,12 @@ class Application extends AbstractLogger implements ContainerInterface
 		);
 
 		foreach ($this->getConfig('*', 'application.aliases', array()) as $aliases) {
-			foreach ($aliases as $target => $alias) {
-				$this->aliases[strtolower($alias)] = strtolower($target);
-
-				if (class_exists($target) && !class_exists($alias)) {
-					class_alias($target, $alias);
+			foreach ($aliases as $interface => $target) {
+				if (!interface_exists($interface)) {
+					class_alias($target, $interface);
 
 				} elseif (interface_exists($target)) {
-					$this->broker->alias($target, $alias);
+					$this->broker->alias($interface, $target);
 				}
 			}
 		}
@@ -547,24 +545,11 @@ class Application extends AbstractLogger implements ContainerInterface
 		}
 
 		foreach ($provider::getInterfaces() as $interface) {
-			$wrapper = function($obj, Broker $broker) use ($provider) {
+			$this->broker->prepare($interface, function($obj, Broker $broker) use ($provider) {
 				return $broker->execute($provider, [$obj]);
-			};
-
-			$this->broker->prepare($interface, $wrapper);
-
-			//
-			// This is a workaround for Auryn which does not resolve class_alias() created aliases
-			// for classes/interfaces on prepare.  As such, we must register the provider under
-			// the aliases as well.
-			//
-
-			foreach (array_keys($this->aliases, $interface) as $alias) {
-				$this->broker->prepare($alias, $wrapper);
-			}
+			});
 		}
 
 		return $this;
 	}
 }
-
