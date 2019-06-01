@@ -183,7 +183,7 @@ class Application extends AbstractLogger implements ContainerInterface
 			$_ENV = $this->environment->get();
 
 			foreach ($this->environment->flatten() as $name => $value) {
-				@putenv("$name=$value");
+				@putenv(str_replace('.', '_', $name) . '=' . $value);
 			}
 		}
 
