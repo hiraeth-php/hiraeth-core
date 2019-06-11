@@ -2,6 +2,7 @@
 
 namespace Hiraeth;
 
+use Exception;
 use SlashTrace\Context\User;
 use SlashTrace\EventHandler\EventHandler;
 
@@ -18,7 +19,7 @@ class ProductionHandler implements EventHandler
 	/**
 	 * The application instance
 	 *
-	 * @var Hiraeth\Application
+	 * @var Application|null
 	 */
 	protected $app = NULL;
 
@@ -26,7 +27,7 @@ class ProductionHandler implements EventHandler
 	/**
 	 * The path of the application, included in error logging
 	 *
-	 * @var string
+	 * @var string|null
 	 */
 	protected $path = NULL;
 
@@ -34,7 +35,7 @@ class ProductionHandler implements EventHandler
 	/**
 	 * The release information of the application, included in error logging
 	 *
-	 * @var array
+	 * @var string|null
 	 */
 	protected $release = NULL;
 
@@ -44,14 +45,14 @@ class ProductionHandler implements EventHandler
 	 *
 	 * @var array
 	 */
-	protected $user = NULL;
+	protected $user = array();
 
 
 	/**
 	 * Instantiate a Production Handler
 	 *
 	 * @access public
-	 * @var Hiraeth\Application $app The application instance for proxying log calls
+	 * @var Application $app The application instance for proxying log calls
 	 * @return void
 	 */
 	public function __construct(Application $app)
@@ -65,7 +66,7 @@ class ProductionHandler implements EventHandler
 	 *
 	 * @access public
 	 * @var Exception $exception The exception to be handled
-	 * @return void
+	 * @return int
 	 */
 	public function handleException($exception)
 	{

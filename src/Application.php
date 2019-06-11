@@ -6,18 +6,16 @@ use Closure;
 use SplFileInfo;
 use RuntimeException;
 
-use Adbar\Dot;
-
 use Dotink\Jin;
 
 use Defuse\Crypto\Key;
 
 use Composer\Autoload\ClassLoader;
 
-use Psr\Container\ContainerInterface;
-
 use Psr\Log\LoggerInterface;
 use Psr\Log\AbstractLogger;
+use Psr\Container\ContainerInterface;
+
 
 use SlashTrace\SlashTrace;
 use SlashTrace\EventHandler\EventHandler;
@@ -50,7 +48,7 @@ class Application extends AbstractLogger implements ContainerInterface
 	 * An instance of our dependency injector/broker
 	 *
 	 * @access protected
-	 * @var Hiraeth\Broker
+	 * @var Broker|null
 	 */
 	protected $broker = NULL;
 
@@ -59,7 +57,7 @@ class Application extends AbstractLogger implements ContainerInterface
 	 * An instance of our configuration
 	 *
 	 * @access protected
-	 * @var Hiraeth\Configuration
+	 * @var Configuration|null
 	 */
 	protected $config = NULL;
 
@@ -68,7 +66,7 @@ class Application extends AbstractLogger implements ContainerInterface
 	 * A dot collection containing environment data
 	 *
 	 * @access protected
-	 * @var Adbar\Dot
+	 * @var Jin\Collection|null
 	 */
 	protected $environment = NULL;
 
@@ -77,13 +75,15 @@ class Application extends AbstractLogger implements ContainerInterface
 	 * Unique application ID
 	 *
 	 * @access protected
-	 * @var string
+	 * @var string|null
 	 */
 	protected $id = NULL;
 
 
 	/**
 	 *
+	 * @access protected
+	 * @var Key|null
 	 */
 	protected $key = NULL;
 
@@ -92,7 +92,7 @@ class Application extends AbstractLogger implements ContainerInterface
 	 * The instance of our PSR-3 Logger
 	 *
 	 * @access protected
-	 * @var LoggerInterface
+	 * @var LoggerInterface|null
 	 */
 	protected $logger = NULL;
 
@@ -101,7 +101,7 @@ class Application extends AbstractLogger implements ContainerInterface
 	 * The instance of our JIN Parser
 	 *
 	 * @access protected
-	 * @var Jin\Parser
+	 * @var Jin\Parser|null
 	 */
 	protected $parser = NULL;
 
@@ -110,7 +110,7 @@ class Application extends AbstractLogger implements ContainerInterface
 	 * The dot collection containing release data
 	 *
 	 * @access protected
-	 * @var Adbar\Dot
+	 * @var Jin\Collection|null
 	 */
 	protected $release = NULL;
 
@@ -119,7 +119,7 @@ class Application extends AbstractLogger implements ContainerInterface
 	 * Absolute path to the application root
 	 *
 	 * @access protected
-	 * @var string
+	 * @var string|null
 	 */
 	protected $root = NULL;
 
@@ -128,7 +128,7 @@ class Application extends AbstractLogger implements ContainerInterface
 	 * The instance of tracer
 	 *
 	 * @access protected
-	 * @var SlashTrace
+	 * @var SlashTrace|null
 	 */
 	protected $tracer = NULL;
 
@@ -179,6 +179,9 @@ class Application extends AbstractLogger implements ContainerInterface
 	 */
 	public function exec(Closure $post_boot)
 	{
+		ini_set('display_errors', 0);
+		ini_set('display_startup_errors', 0);
+
 		if ($this->environment) {
 			$_ENV = $this->environment->get();
 
@@ -363,7 +366,7 @@ class Application extends AbstractLogger implements ContainerInterface
 	/**
 	 *
 	 */
-	public function getId()
+	public function getId(): string
 	{
 		if (!isset($this->id)) {
 			$this->id = md5(uniqid(static::class));
@@ -376,7 +379,7 @@ class Application extends AbstractLogger implements ContainerInterface
 	/**
 	 *
 	 */
-	public function getKey()
+	public function getKey(): Key
 	{
 		if (!$this->key) {
 			if (!$this->hasFile('storage/key')) {
@@ -472,13 +475,11 @@ class Application extends AbstractLogger implements ContainerInterface
 	 * @param array $context
 	 * @return void
 	 */
-	public function log($level, $message, array $context = array()): Application
+	public function log($level, $message, array $context = array()): void
 	{
 		if (isset($this->logger)) {
 			$this->logger->log($level, $message, $context);
 		}
-
-		return $this;
 	}
 
 

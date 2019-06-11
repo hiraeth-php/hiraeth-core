@@ -14,6 +14,14 @@ use SlashTrace\EventHandler\DebugHandler;
 class DebuggingHandler extends DebugHandler
 {
 	/**
+	 * The application instance
+	 *
+	 * @var Application|null
+	 */
+	protected $app = NULL;
+
+
+	/**
 	 *
 	 */
 	public function __construct(Application $app)
@@ -27,7 +35,7 @@ class DebuggingHandler extends DebugHandler
 	 *
 	 * @access public
 	 * @var Exception $exception The exception to be handled
-	 * @return void
+	 * @return int
 	 */
 	public function handleException($exception)
 	{
