@@ -190,12 +190,12 @@ class Application extends AbstractLogger implements ContainerInterface
 			}
 		}
 
-		$this->config = new Configuration(
-			$this->parser,
-			$this->getEnvironment('CACHING', TRUE)
+		$this->config = $this->get(Configuration::class, [
+			':parser'    => $this->parser,
+			':cache_dir' => $this->getEnvironment('CACHING', TRUE)
 				? $this->getDirectory('storage/cache', TRUE)
 				: NULL
-		);
+		]);
 
 		$this->config->load(
 			$this->getDirectory($this->getEnvironment('CONFIG.DIR', 'config')),
@@ -251,9 +251,9 @@ class Application extends AbstractLogger implements ContainerInterface
 	/**
 	 *
 	 */
-	public function get($alias)
+	public function get($alias, $args = array())
 	{
-		return $this->broker->make($alias);
+		return $this->broker->make($alias, $args);
 	}
 
 
