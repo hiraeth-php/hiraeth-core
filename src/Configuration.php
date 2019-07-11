@@ -63,8 +63,18 @@ class Configuration
 
 		} else {
 			return $default;
-
 		}
+	}
+
+
+	/**
+	 *
+	 */
+	public function getCollection($name)
+	{
+		return isset($this->collections[$name])
+			? $this->collections[$name]
+			: NULL;
 	}
 
 
@@ -186,6 +196,5 @@ class Configuration
 		if (!$cache_path || !$this->stale) {
 			return;
 		}
-
 	}
 }
