@@ -164,6 +164,8 @@ class Application extends AbstractLogger implements ContainerInterface
 
 		if ($this->hasFile($release_file)) {
 			$this->release = $this->parser->parse(file_get_contents($this->getFile($release_file)));
+		} else {
+			$this->release = $this->parser->parse('NAME = Unknown Release');
 		}
 
 		if ($this->hasFile($env_file)) {
@@ -177,7 +179,7 @@ class Application extends AbstractLogger implements ContainerInterface
 	/**
 	 *
 	 */
-	public function exec(Closure $post_boot)
+	public function boot()
 	{
 		ini_set('display_errors', 0);
 		ini_set('display_startup_errors', 0);
@@ -243,7 +245,15 @@ class Application extends AbstractLogger implements ContainerInterface
 		$this->tracer->setRelease($this->release->toJson());
 
 		$this->record('Booting Completed');
+	}
 
+
+	/**
+	 *
+	 */
+	public function exec(Closure $post_boot)
+	{
+		$this->boot();
 		exit($this->broker->execute(Closure::bind($post_boot, $this, $this)));
 	}
 
@@ -553,3 +563,4 @@ class Application extends AbstractLogger implements ContainerInterface
 		return $this;
 	}
 }
+
