@@ -419,7 +419,7 @@ class Application extends AbstractLogger implements ContainerInterface
 	 */
 	public function has($alias)
 	{
-		return $this->broker->has($alias);
+		return class_exists($alias) || $this->broker->has($alias);
 	}
 
 
