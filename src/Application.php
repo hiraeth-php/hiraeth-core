@@ -206,7 +206,7 @@ class Application extends AbstractLogger implements ContainerInterface
 
 		foreach ($this->getConfig('*', 'application.aliases', array()) as $aliases) {
 			foreach ($aliases as $interface => $target) {
-				if (!interface_exists($interface)) {
+				if (!interface_exists($interface) && !class_exists($interface)) {
 					class_alias($target, $interface);
 				}
 
