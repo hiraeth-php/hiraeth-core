@@ -125,7 +125,7 @@ class Application extends AbstractLogger
 		$this->broker = new Broker();
 		$this->config = $this->broker->make(Configuration::class, [
 			':cache_dir' => $this->getEnvironment('CACHING', TRUE)
-				? $this->getDirectory('writable/cache', TRUE)
+				? $this->getDirectory('writable/cache', TRUE)->getRealPath()
 				: NULL
 		]);
 
