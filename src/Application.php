@@ -36,6 +36,14 @@ use SlashTrace\EventHandler\EventHandler;
 class Application extends AbstractLogger implements ContainerInterface
 {
 	/**
+	 * A constant for boot providers
+	 *
+	 * @var string
+	 */
+	const BOOT = '%BOOT%';
+
+
+	/**
 	 * A list of interface and/or class aliases
 	 *
 	 * @access protected
@@ -154,6 +162,9 @@ class Application extends AbstractLogger implements ContainerInterface
 		$this->tracer->register();
 
 		$this->broker->share($this);
+		$this->broker->delegate(static::BOOT, function() {
+			return $this->share(new class {});
+		});
 
 		if (!$this->hasDirectory(NULL)) {
 			throw new RuntimeException(sprintf(
@@ -216,34 +227,38 @@ class Application extends AbstractLogger implements ContainerInterface
 
 		foreach ($this->getConfig('*', 'application.delegates', array()) as $delegates) {
 			foreach ($delegates as $delegate) {
-				$this->registerDelegate($delegate);
+				if (!isset(class_implements($delegate)[Delegate::class])) {
+					throw new RuntimeException(sprintf(
+						'Cannot register delegate "%s", does not implemented Hiraeth\Delegate',
+						$delegate
+					));
+				}
+
+				$this->broker->delegate($delegate::getClass(), $delegate);
 			}
 		}
 
 		foreach ($this->getConfig('*', 'application.providers', array()) as $providers) {
 			foreach ($providers as $provider) {
-				$this->registerProvider($provider);
+				if (!isset(class_implements($provider)[Provider::class])) {
+					throw new RuntimeException(sprintf(
+						'Cannot register provider "%s", does not implemented Hiraeth\Provider',
+						$provider
+					));
+				}
+
+				foreach ($provider::getInterfaces() as $interface) {
+					$this->broker->prepare($interface, function($obj, Broker $broker) use ($provider) {
+						return $broker->execute($provider, [$obj]);
+					});
+				}
 			}
 		}
 
-		if ($this->getEnvironment('LOGGING', TRUE)) {
-			if (!$this->has(LoggerInterface::class)) {
-				throw new RuntimeException(sprintf(
-					'Logging is enabled, but "%s" does not have a registered alias',
-					LoggerInterface::class
-				));
-			}
-
-			$this->logger = $this->get(LoggerInterface::class);
-		}
-
-		foreach (array_reverse($this->getEnvironment('HANDLERS', [])) as $handler) {
-			$this->tracer->prependHandler($this->get($handler));
-		}
-
-		$this->tracer->setApplicationPath($this->getDirectory()->getPathname());
+		$this->tracer->setApplicationPath($this->getDirectory()->getRealPath());
 		$this->tracer->setRelease($this->release->toJson());
 
+		$this->get(static::BOOT);
 		$this->record('Booting Completed');
 
 		if ($post_boot) {
@@ -510,50 +525,32 @@ class Application extends AbstractLogger implements ContainerInterface
 	/**
 	 *
 	 */
+	public function setLogger(string $logger): Application
+	{
+		$this->logger = $this->get($logger);
+
+		return $this;
+	}
+
+
+	/**
+	 *
+	 */
+	public function setHandler(string $handler): Application
+	{
+		$this->tracer->prependHandler($this->get($handler));
+
+		return $this;
+	}
+
+
+	/**
+	 *
+	 */
 	public function share(object $instance): object
 	{
 		$this->broker->share($instance);
 
 		return $instance;
-	}
-
-
-	/**
-	 *
-	 */
-	protected function registerDelegate($delegate): object
-	{
-		if (!isset(class_implements($delegate)[Delegate::class])) {
-			throw new RuntimeException(sprintf(
-				'Cannot register delegate "%s", does not implemented Hiraeth\Delegate',
-				$delegate
-			));
-		}
-
-		$this->broker->delegate($delegate::getClass(), $delegate);
-
-		return $this;
-	}
-
-
-	/**
-	 *
-	 */
-	protected function registerProvider($provider): object
-	{
-		if (!isset(class_implements($provider)[Provider::class])) {
-			throw new RuntimeException(sprintf(
-				'Cannot register provider "%s", does not implemented Hiraeth\Provider',
-				$provider
-			));
-		}
-
-		foreach ($provider::getInterfaces() as $interface) {
-			$this->broker->prepare($interface, function($obj, Broker $broker) use ($provider) {
-				return $broker->execute($provider, [$obj]);
-			});
-		}
-
-		return $this;
 	}
 }
