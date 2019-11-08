@@ -36,11 +36,11 @@ use SlashTrace\EventHandler\EventHandler;
 class Application extends AbstractLogger implements ContainerInterface
 {
 	/**
-	 * A constant for boot providers
+	 * A constant regex for absolute path matching
 	 *
 	 * @var string
 	 */
-	const BOOT = '%BOOT%';
+	const REGEX_ABS_PATH = '#^(/|[a-z]+://).*$#';
 
 
 	/**
@@ -335,13 +335,11 @@ class Application extends AbstractLogger implements ContainerInterface
 	 */
 	public function getDirectory(string $path = NULL, bool $create = FALSE): SplFileInfo
 	{
-		$exists = $this->hasDirectory($path);
-
-		if (!$path || $path[0] != '/') {
+		if (!$path || !preg_match(static::REGEX_ABS_PATH, $path)) {
 			$path = $this->root . DIRECTORY_SEPARATOR . $path;
 		}
 
-		if (!$exists && $create) {
+		if (!file_exists($path) && $create) {
 			mkdir($path, 0777, TRUE);
 		}
 
@@ -392,13 +390,11 @@ class Application extends AbstractLogger implements ContainerInterface
 	 */
 	public function getFile(string $path, bool $create = FALSE): SplFileInfo
 	{
-		$exists = $this->hasFile($path);
-
-		if (strlen($path) && $path[0] !== '/') {
+		if (!$path || !preg_match(static::REGEX_ABS_PATH, $path)) {
 			$path = $this->root . DIRECTORY_SEPARATOR . $path;
 		}
 
-		if (!$exists && $create) {
+		if (!file_exists($path) && $create) {
 			$directory = dirname($path);
 
 			if (!is_dir($directory)) {
@@ -473,7 +469,7 @@ class Application extends AbstractLogger implements ContainerInterface
 	 */
 	public function hasDirectory($path)
 	{
-		if (!$path || $path[0] != '/') {
+		if (!$path || !preg_match(static::REGEX_ABS_PATH, $path)) {
 			$path = $this->root . DIRECTORY_SEPARATOR . $path;
 		}
 
@@ -486,7 +482,7 @@ class Application extends AbstractLogger implements ContainerInterface
 	 */
 	public function hasFile($path)
 	{
-		if (strlen($path) && $path[0] !== '/') {
+		if (!$path || !preg_match(static::REGEX_ABS_PATH, $path)) {
 			$path = $this->root . DIRECTORY_SEPARATOR . $path;
 		}
 
