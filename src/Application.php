@@ -336,7 +336,10 @@ class Application extends AbstractLogger implements ContainerInterface
 	public function getDirectory(string $path = NULL, bool $create = FALSE): SplFileInfo
 	{
 		$exists = $this->hasDirectory($path);
-		$path   = $this->root . DIRECTORY_SEPARATOR . $path;
+
+		if (strlen($path) && $path[0] !== '/') {
+			$path = $this->root . DIRECTORY_SEPARATOR . $path;
+		}
 
 		if (!$exists && $create) {
 			mkdir($path, 0777, TRUE);
@@ -390,7 +393,10 @@ class Application extends AbstractLogger implements ContainerInterface
 	public function getFile(string $path, bool $create = FALSE): SplFileInfo
 	{
 		$exists = $this->hasFile($path);
-		$path   = $this->root . DIRECTORY_SEPARATOR . $path;
+
+		if (strlen($path) && $path[0] !== '/') {
+			$path = $this->root . DIRECTORY_SEPARATOR . $path;
+		}
 
 		if (!$exists && $create) {
 			$directory = dirname($path);
@@ -467,7 +473,9 @@ class Application extends AbstractLogger implements ContainerInterface
 	 */
 	public function hasDirectory($path)
 	{
-		$path = $this->root . DIRECTORY_SEPARATOR . $path;
+		if (strlen($path) && $path[0] !== '/') {
+			$path = $this->root . DIRECTORY_SEPARATOR . $path;
+		}
 
 		return is_readable($path) && is_dir($path);
 	}
@@ -478,7 +486,9 @@ class Application extends AbstractLogger implements ContainerInterface
 	 */
 	public function hasFile($path)
 	{
-		$path = $this->root . DIRECTORY_SEPARATOR . $path;
+		if (strlen($path) && $path[0] !== '/') {
+			$path = $this->root . DIRECTORY_SEPARATOR . $path;
+		}
 
 		return is_readable($path) && is_file($path);
 	}
