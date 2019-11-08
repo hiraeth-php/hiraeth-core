@@ -337,7 +337,7 @@ class Application extends AbstractLogger implements ContainerInterface
 	{
 		$exists = $this->hasDirectory($path);
 
-		if (strlen($path) && $path[0] !== '/') {
+		if (!$path || $path[0] != '/') {
 			$path = $this->root . DIRECTORY_SEPARATOR . $path;
 		}
 
@@ -473,7 +473,7 @@ class Application extends AbstractLogger implements ContainerInterface
 	 */
 	public function hasDirectory($path)
 	{
-		if (strlen($path) && $path[0] !== '/') {
+		if (!$path || $path[0] != '/') {
 			$path = $this->root . DIRECTORY_SEPARATOR . $path;
 		}
 
