@@ -62,15 +62,6 @@ class Application extends AbstractLogger implements ContainerInterface
 
 
 	/**
-	 * A list of boot provider
-	 *
-	 * @access protected
-	 * @var array
-	 */
-	protected $boot = array();
-
-
-	/**
 	 * An instance of our configuration
 	 *
 	 * @access protected
@@ -171,17 +162,15 @@ class Application extends AbstractLogger implements ContainerInterface
 	public function __construct(string $root_path, string $env_file = '.env', string $release_file = 'local/.release')
 	{
 		$this->root   = $root_path;
-		$this->state  = (object) [];
+		$this->state  = new State();
 		$this->broker = new Broker();
 		$this->tracer = new SlashTrace();
 		$this->parser = new Jin\Parser(['app' => $this]);
 
+		$this->broker->share($this);
 		$this->tracer->prependHandler(new DebuggingHandler($this));
 		$this->tracer->prependHandler(new ProductionHandler($this));
 		$this->tracer->register();
-
-		$this->broker->share($this);
-		$this->broker->delegate(static::BOOT, $this);
 
 		if (!$this->hasDirectory(NULL)) {
 			throw new RuntimeException(sprintf(
@@ -208,10 +197,6 @@ class Application extends AbstractLogger implements ContainerInterface
 	 *
 	 */
 	public function __invoke() {
-		while($provider = array_shift($this->boot)) {
-			$this->broker->execute($provider, [$this->state]);
-		}
-
 		return $this->state;
 	}
 
@@ -223,6 +208,8 @@ class Application extends AbstractLogger implements ContainerInterface
 	{
 		ini_set('display_errors', 0);
 		ini_set('display_startup_errors', 0);
+
+		$bootables = array();
 
 		if ($this->environment) {
 			$_ENV = $this->environment->get();
@@ -277,8 +264,8 @@ class Application extends AbstractLogger implements ContainerInterface
 				}
 
 				foreach ($provider::getInterfaces() as $interface) {
-					if ($interface == static::BOOT) {
-						$this->boot[] = $provider;
+					if ($interface == __CLASS__) {
+						$bootables[] = $provider;
 						continue;
 					}
 
@@ -289,11 +276,14 @@ class Application extends AbstractLogger implements ContainerInterface
 			}
 		}
 
+		while($provider = array_shift($bootables)) {
+			$this->broker->execute($provider, [$this->state]);
+		}
+
 		$this->tracer->setApplicationPath($this->getDirectory()->getRealPath());
 		$this->tracer->setRelease($this->release->toJson());
 
-		$this->broker->make(static::BOOT);
-		$this->record('Booting Completed');
+		$this->record('Booting Completed', (array) $this());
 
 		if ($post_boot) {
 			exit($this->broker->execute(Closure::bind($post_boot, $this, $this)));
