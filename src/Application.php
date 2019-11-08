@@ -62,6 +62,15 @@ class Application extends AbstractLogger implements ContainerInterface
 
 
 	/**
+	 * A list of boot provider
+	 *
+	 * @access protected
+	 * @var array
+	 */
+	protected $boot = array();
+
+
+	/**
 	 * An instance of our configuration
 	 *
 	 * @access protected
@@ -133,6 +142,15 @@ class Application extends AbstractLogger implements ContainerInterface
 
 
 	/**
+	 * Shared boot / application state
+	 *
+	 * @access protected
+	 * @var object|null
+	 */
+	protected $state = NULL;
+
+
+	/**
 	 * The instance of tracer
 	 *
 	 * @access protected
@@ -153,6 +171,7 @@ class Application extends AbstractLogger implements ContainerInterface
 	public function __construct(string $root_path, string $env_file = '.env', string $release_file = 'local/.release')
 	{
 		$this->root   = $root_path;
+		$this->state  = (object) [];
 		$this->broker = new Broker();
 		$this->tracer = new SlashTrace();
 		$this->parser = new Jin\Parser(['app' => $this]);
@@ -162,9 +181,7 @@ class Application extends AbstractLogger implements ContainerInterface
 		$this->tracer->register();
 
 		$this->broker->share($this);
-		$this->broker->delegate(static::BOOT, function() {
-			return $this->share(new class {});
-		});
+		$this->broker->delegate(static::BOOT, $this);
 
 		if (!$this->hasDirectory(NULL)) {
 			throw new RuntimeException(sprintf(
@@ -184,6 +201,18 @@ class Application extends AbstractLogger implements ContainerInterface
 		}
 
 		date_default_timezone_set($this->getEnvironment('TIMEZONE', 'UTC'));
+	}
+
+
+	/**
+	 *
+	 */
+	public function __invoke() {
+		while($provider = array_shift($this->boot)) {
+			$this->broker->execute($provider, [$this->state]);
+		}
+
+		return $this->state;
 	}
 
 
@@ -248,6 +277,11 @@ class Application extends AbstractLogger implements ContainerInterface
 				}
 
 				foreach ($provider::getInterfaces() as $interface) {
+					if ($interface == static::BOOT) {
+						$this->boot[] = $provider;
+						continue;
+					}
+
 					$this->broker->prepare($interface, function($obj, Broker $broker) use ($provider) {
 						return $broker->execute($provider, [$obj]);
 					});
@@ -258,7 +292,7 @@ class Application extends AbstractLogger implements ContainerInterface
 		$this->tracer->setApplicationPath($this->getDirectory()->getRealPath());
 		$this->tracer->setRelease($this->release->toJson());
 
-		$this->get(static::BOOT);
+		$this->broker->make(static::BOOT);
 		$this->record('Booting Completed');
 
 		if ($post_boot) {
