@@ -47,33 +47,21 @@ class Configuration
 	/**
 	 *
 	 */
-	public function get($collection_name, $key, $default)
+	public function get($path, $key, $default)
 	{
-		if ($collection_name == '*') {
-			$result = array();
-
-			foreach ($this->collections as $name => $collection) {
-				$result[$name] = $collection->get($key, $default);
-			}
-
-			return $result;
-
-		} elseif (isset($this->collections[$collection_name])) {
-			return $this->collections[$collection_name]->get($key, $default);
-
-		} else {
-			return $default;
-		}
+		return isset($this->collections[$path])
+		 	? $this->collections[$path]->get($key, $default)
+			: $default;
 	}
 
 
 	/**
 	 *
 	 */
-	public function getCollection($name)
+	public function getCollection($path): ?Jin\Collection
 	{
-		return isset($this->collections[$name])
-			? $this->collections[$name]
+		return isset($this->collections[$path])
+			? $this->collections[$path]
 			: NULL;
 	}
 
@@ -81,7 +69,16 @@ class Configuration
 	/**
 	 *
 	 */
-	public function load($directory, array $sources = NULL)
+	public function getCollectionPaths(): array
+	{
+		return array_keys($this->collections);
+	}
+
+
+	/**
+	 *
+	 */
+	public function load($directory, string $source = NULL)
 	{
 		$cache_hash = md5($directory);
 		$cache_path = $this->cacheDir
@@ -104,10 +101,9 @@ class Configuration
 			}
 		}
 
-		if ($sources) {
-			foreach ($sources as $source) {
-				$this->loadFromDirectory($directory . '/' . $source);
-			}
+		if ($source) {
+			$this->loadFromDirectory($directory . '/' . 'default');
+			$this->loadFromDirectory($directory . '/' . $source);
 
 		} else {
 			$this->loadFromDirectory($directory);

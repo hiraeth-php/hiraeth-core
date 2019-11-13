@@ -186,7 +186,13 @@ class Application extends AbstractLogger implements ContainerInterface
 		}
 
 		if ($this->hasFile($env_file)) {
-			$this->environment = $this->parser->parse(file_get_contents($this->getFile($env_file)));
+			$this->environment = $_ENV = $_ENV + $this->parser
+				->parse(file_get_contents($this->getFile($env_file)))
+				->flatten('_');
+
+			foreach ($this->environment as $name => $value) {
+				@putenv(sprintf('%s=%s', $name, $value));
+			}
 		}
 
 		date_default_timezone_set($this->getEnvironment('TIMEZONE', 'UTC'));
@@ -211,14 +217,6 @@ class Application extends AbstractLogger implements ContainerInterface
 
 		$bootables = array();
 
-		if ($this->environment) {
-			$_ENV = $this->environment->get();
-
-			foreach ($this->environment->flatten() as $name => $value) {
-				@putenv(str_replace('.', '_', $name) . '=' . $value);
-			}
-		}
-
 		$this->config = $this->get(Configuration::class, [
 			':parser'    => $this->parser,
 			':cache_dir' => $this->getEnvironment('CACHING', TRUE)
@@ -227,8 +225,8 @@ class Application extends AbstractLogger implements ContainerInterface
 		]);
 
 		$this->config->load(
-			$this->getDirectory($this->getEnvironment('CONFIG.DIR', 'config')),
-			$this->getEnvironment('CONFIG.SOURCES', [])
+			$this->getDirectory($this->getEnvironment('CONFIG_DIR', 'config')),
+			$this->getEnvironment('CONFIG_SRC', NULL)
 		);
 
 		foreach ($this->getConfig('*', 'application.aliases', array()) as $aliases) {
@@ -304,21 +302,35 @@ class Application extends AbstractLogger implements ContainerInterface
 	 * Get configuration data from the a configuration collection
 	 *
 	 * @access public
-	 * @var string $collection The name of the collection from which to fetch data
-	 * @var string $path The dot separated path to the data
-	 * @var mixed $default The default value, should the data not exist in the configuration
-	 * @return mixed The value as retrieved from the configuration collection, or default
+	 * @var string $path The collection path from which to fetch data
+	 * @var string $key The value to retrieve from the collection (dot separated)
+	 * @var mixed $default The default value, should the data not exist
+	 * @return mixed The value/array of values as retrieved from collection(s), or default
 	 */
-	public function getConfig(string $collection, string $path, $default = NULL)
+	public function getConfig(string $path, string $key, $default = NULL)
 	{
-		$value = $this->config->get($collection, $path, $default);
+		if ($path == '*') {
+			$value = array();
 
-		if ($default !== NULL) {
-			settype($value, gettype($default));
-		}
+			foreach ($this->config->getCollectionPaths() as $path) {
+				if (!$this->config->getCollection($path)->has($key)) {
+					continue;
+				}
 
-		if (is_array($default)) {
-			$value = $value + $default;
+				$value[$path] = $this->getConfig($path, $key, $default);
+			}
+
+		} else {
+			$value = $this->config->get($path, $key, $default);
+
+			if ($default !== NULL) {
+				settype($value, gettype($default));
+			}
+
+			if (is_array($default)) {
+				$value = $value + $default;
+			}
+
 		}
 
 		return $value;
@@ -360,10 +372,8 @@ class Application extends AbstractLogger implements ContainerInterface
 	 */
 	public function getEnvironment(string $name = NULL, $default = NULL)
 	{
-		if ($this->environment && $this->environment->has($name)) {
-			$value = $this->environment->get($name);
-		} elseif (getenv($name) !== FALSE) {
-			$value = getenv($name);
+		if (array_key_exists($name, $this->environment)) {
+			$value = $this->environment[$name];
 		} else {
 			$value = $default;
 		}
@@ -508,11 +518,11 @@ class Application extends AbstractLogger implements ContainerInterface
 	 */
 	public function isDebugging(): bool
 	{
-		if ($this->environment) {
-			return $this->getEnvironment('DEBUG', FALSE);
+		if (!$this->environment) {
+			return FALSE;
 		}
 
-		return TRUE;
+		return $this->getEnvironment('DEBUG', FALSE);
 	}
 
 
