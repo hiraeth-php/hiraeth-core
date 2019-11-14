@@ -2,6 +2,8 @@
 
 namespace Hiraeth;
 
+use RuntimeException;
+
 class State
 {
 	/**

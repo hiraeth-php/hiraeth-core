@@ -74,9 +74,9 @@ class Application extends AbstractLogger implements ContainerInterface
 	 * A dot collection containing environment data
 	 *
 	 * @access protected
-	 * @var Jin\Collection|null
+	 * @var array
 	 */
-	protected $environment = NULL;
+	protected $environment = array();
 
 
 	/**
