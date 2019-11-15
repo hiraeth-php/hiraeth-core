@@ -15,7 +15,7 @@
         "php": ">=7.2",
         "psr/log": "^1.1",
         "psr/container": "^1.0",
-        "dotink/jin": "^3.3",
+        "dotink/jin": "^3.5",
         "rdlowrey/auryn": "^1.4",
         "slashtrace/slashtrace": "^1.0",
         "defuse/php-encryption": "^2.2"

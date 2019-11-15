@@ -165,7 +165,13 @@ class Application extends AbstractLogger implements ContainerInterface
 		$this->state  = new State();
 		$this->broker = new Broker();
 		$this->tracer = new SlashTrace();
-		$this->parser = new Jin\Parser(['app' => $this]);
+		$this->parser = new Jin\Parser([
+			'app' => $this
+		], [
+			'env'  => [$this, 'getEnvironment'],
+			'dir'  => [$this, 'getDirectory'],
+			'file' => [$this, 'getFile']
+		]);
 
 		$this->broker->share($this);
 		$this->tracer->prependHandler(new DebuggingHandler($this));
