@@ -329,7 +329,7 @@ class Application extends AbstractLogger implements ContainerInterface
 		} else {
 			$value = $this->config->get($path, $key, $default);
 
-			if ($default !== NULL) {
+			if (!is_null($default) && !is_object($default)) {
 				settype($value, gettype($default));
 			}
 
@@ -384,7 +384,7 @@ class Application extends AbstractLogger implements ContainerInterface
 			$value = $default;
 		}
 
-		if ($default !== NULL) {
+		if (!is_null($default) && !is_object($default)) {
 			settype($value, gettype($default));
 		}
 
