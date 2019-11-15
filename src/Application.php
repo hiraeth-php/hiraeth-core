@@ -231,7 +231,7 @@ class Application extends AbstractLogger implements ContainerInterface
 		]);
 
 		$this->config->load(
-			$this->getDirectory($this->getEnvironment('CONFIG_DIR', 'config')),
+			$this->getEnvironment('CONFIG_DIR', $this->getDirectory('config')),
 			$this->getEnvironment('CONFIG_SRC', NULL)
 		);
 
