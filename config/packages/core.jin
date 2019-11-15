@@ -7,7 +7,7 @@
 	;
 
 	aliases = {
-		"Psr\Container\ContainerInterface": "Hiraeth\Application"
+		"Psr\Container\ContainerInterface": "Hiraeth\Broker"
 	}
 
 	;

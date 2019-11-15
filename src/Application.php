@@ -174,6 +174,8 @@ class Application extends AbstractLogger implements ContainerInterface
 		]);
 
 		$this->broker->share($this);
+		$this->broker->share($this->broker);
+
 		$this->tracer->prependHandler(new DebuggingHandler($this));
 		$this->tracer->prependHandler(new ProductionHandler($this));
 		$this->tracer->register();
