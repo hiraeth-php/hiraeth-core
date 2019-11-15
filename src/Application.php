@@ -169,13 +169,11 @@ class Application extends AbstractLogger implements ContainerInterface
 			'app' => $this
 		], [
 			'env'  => [$this, 'getEnvironment'],
-			'dir'  => [$this, 'getDirectory'],
-			'file' => [$this, 'getFile']
+			'dir'  => function($path) { return $this->getDirectory($path, TRUE)->getRealPath(); },
+			'file' => function($path) { return $this->getFile($path, TRUE)->getRealPath(); }
 		]);
 
 		$this->broker->share($this);
-		$this->broker->share($this->broker);
-
 		$this->tracer->prependHandler(new DebuggingHandler($this));
 		$this->tracer->prependHandler(new ProductionHandler($this));
 		$this->tracer->register();
@@ -203,6 +201,7 @@ class Application extends AbstractLogger implements ContainerInterface
 			}
 		}
 
+		umask($this->getEnvironment('UMASK', 0002));
 		date_default_timezone_set($this->getEnvironment('TIMEZONE', 'UTC'));
 	}
 
@@ -415,9 +414,7 @@ class Application extends AbstractLogger implements ContainerInterface
 		if (!file_exists($path) && $create) {
 			$directory = dirname($path);
 
-			if (!is_dir($directory)) {
-				mkdir($directory, 0777, TRUE);
-			}
+			$this->getDirectory($directory, TRUE);
 
 			file_put_contents($path, '');
 		}
