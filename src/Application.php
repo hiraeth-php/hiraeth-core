@@ -364,7 +364,14 @@ class Application extends AbstractLogger implements ContainerInterface
 		$exists = @file_exists($info->getPathname());
 
 		if (!$exists && $create) {
-			mkdir($info->getPathname(), 0777, TRUE);
+			$result = @mkdir($info->getPathname(), 0777, TRUE);
+
+			if (!$result) {
+				throw new RuntimeException(sprintf(
+					'Failed creating "%s", not writable or not supported',
+					$info->getPathname()
+				));
+			}
 		}
 
 		return $info;
