@@ -169,8 +169,8 @@ class Application extends AbstractLogger implements ContainerInterface
 			'app' => $this
 		], [
 			'env'  => [$this, 'getEnvironment'],
-			'dir'  => function($path) { return $this->getDirectory($path, TRUE)->getRealPath(); },
-			'file' => function($path) { return $this->getFile($path, TRUE)->getRealPath(); }
+			'dir'  => function($path) { return $this->getDirectory($path, TRUE)->getPathname(); },
+			'file' => function($path) { return $this->getFile($path)->getPathname(); }
 		]);
 
 		$this->broker->share($this);
