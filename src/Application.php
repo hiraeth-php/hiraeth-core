@@ -360,11 +360,14 @@ class Application extends AbstractLogger implements ContainerInterface
 			$path = $this->root . DIRECTORY_SEPARATOR . $path;
 		}
 
-		if (!file_exists($path) && $create) {
-			mkdir($path, 0777, TRUE);
+		$info   = new SplFileInfo($path);
+		$exists = @file_exists($info->getPathname());
+
+		if (!$exists && $create) {
+			mkdir($info->getPathname(), 0777, TRUE);
 		}
 
-		return new SplFileInfo(rtrim($path, '\\/'));
+		return $info;
 	}
 
 
@@ -413,15 +416,16 @@ class Application extends AbstractLogger implements ContainerInterface
 			$path = $this->root . DIRECTORY_SEPARATOR . $path;
 		}
 
-		if (!file_exists($path) && $create) {
-			$directory = dirname($path);
+		$info   = new SplFileInfo($path);
+		$exists = @file_exists($info->getPathname());
 
-			$this->getDirectory($directory, TRUE);
-
-			file_put_contents($path, '');
+		if (!$exists && $create) {
+			$this->getDirectory($info->getPath(), TRUE);
+			$info->openfile('w')->fwrite('');
 		}
 
-		return new SplFileInfo($path);
+
+		return $info;
 	}
 
 
