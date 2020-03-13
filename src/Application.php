@@ -11,7 +11,6 @@ use Dotink\Jin;
 use Defuse\Crypto\Key;
 
 use Composer\Autoload\ClassLoader;
-
 use Psr\Log\LoggerInterface;
 use Psr\Log\AbstractLogger;
 use Psr\Container\ContainerInterface;
@@ -285,6 +284,10 @@ class Application extends AbstractLogger implements ContainerInterface
 
 		while($provider = array_shift($bootables)) {
 			$this->broker->execute($provider, [$this->state]);
+		}
+
+		if ($this->has(LoggerInterface::class)) {
+			$this->logger = $this->get(LoggerInterface::class);
 		}
 
 		$this->tracer->setApplicationPath($this->getDirectory()->getRealPath());
@@ -577,17 +580,6 @@ class Application extends AbstractLogger implements ContainerInterface
 	public function run($target, array $parameters = array())
 	{
 		return $this->broker->execute($target, $parameters);
-	}
-
-
-	/**
-	 *
-	 */
-	public function setLogger(string $logger): Application
-	{
-		$this->logger = $this->get($logger);
-
-		return $this;
 	}
 
 
