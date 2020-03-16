@@ -296,7 +296,14 @@ class Application extends AbstractLogger implements ContainerInterface
 		$this->record('Booting Completed', (array) $this());
 
 		if ($post_boot) {
-			exit($this->broker->execute(Closure::bind($post_boot, $this, $this)));
+			$code = $this->broker->execute(Closure::bind($post_boot, $this, $this));
+
+			if (ob_get_level()) {
+				ob_end_flush();
+			}
+
+			flush();
+			exit($code);
 		}
 	}
 
