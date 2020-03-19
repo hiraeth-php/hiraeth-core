@@ -73,6 +73,7 @@ class ProductionHandler implements EventHandler
 		$this->app->error($exception->getMessage(), [
 			'file'    => $exception->getFile(),
 			'line'    => $exception->getLine(),
+			'trace'   => $exception->getTrace(),
 			'release' => $this->release,
 			'path'    => $this->path,
 			'user'    => $this->user
